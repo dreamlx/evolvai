@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +21,21 @@ log = logging.getLogger(__name__)
 
 
 class MemoriesManager:
+    """
+    [DEPRECATED] Legacy memory manager for backward compatibility.
+
+    DEPRECATED: This class will be replaced by intelligent memory system.
+    Use docs/ folder for project documentation.
+    See docs/serena-intelligent-memory-redesign.md for details.
+    """
+
     def __init__(self, project_root: str):
+        warnings.warn(
+            "MemoriesManager is deprecated. Use docs/ folder for project documentation. "
+            "New intelligent memory system coming in Phase 2.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._memory_dir = Path(get_serena_managed_in_project_dir(project_root)) / "memories"
         self._memory_dir.mkdir(parents=True, exist_ok=True)
         self._encoding = SERENA_FILE_ENCODING

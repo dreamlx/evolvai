@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 **Essential Commands (use these exact commands):**
-- `uv run poe format` - Format code (BLACK + RUFF) - ONLY allowed formatting command
-- `uv run poe type-check` - Run mypy type checking - ONLY allowed type checking command  
+- `uv run poe format` - Format code (RUFF + BLACK) - ONLY allowed formatting command
+- `uv run poe type-check` - Run mypy type checking - ONLY allowed type checking command
 - `uv run poe test` - Run tests with default markers (excludes java/rust by default)
 - `uv run poe test -m "python or go"` - Run specific language tests
 - `uv run poe lint` - Check code style without fixing
@@ -24,7 +24,7 @@ Available pytest markers for selective testing:
 
 ## Architecture Overview
 
-Serena is a dual-layer coding agent toolkit:
+Serena is a semantic code analysis and editing toolkit that provides IDE-like capabilities to AI agents through the Model Context Protocol (MCP):
 
 ### Core Components
 
@@ -44,15 +44,22 @@ Serena is a dual-layer coding agent toolkit:
 - **memory_tools.py** - Project knowledge persistence and retrieval
 - **config_tools.py** - Project activation, mode switching
 - **workflow_tools.py** - Onboarding and meta-operations
+- **jetbrains_tools.py** - JetBrains IDE integration
 
 **4. Configuration System (`src/serena/config/`)**
-- **Contexts** - Define tool sets for different environments (desktop-app, agent, ide-assistant)
-- **Modes** - Operational patterns (planning, editing, interactive, one-shot)
+- **Contexts** - Define tool sets for different environments (desktop-app, agent, ide-assistant, codex)
+- **Modes** - Operational patterns (planning, editing, interactive, one-shot, onboarding)
 - **Projects** - Per-project settings and language server configs
+
+**5. Language Server Infrastructure (`src/solidlsp/`)**
+- **SolidLanguageServer** - Unified wrapper around LSP implementations
+- **language_servers/** - Individual language server adapters for 25+ languages
+- **Caching system** - Reduces language server overhead with intelligent caching
+- **Error recovery** - Automatic restart of crashed language servers
 
 ### Language Support Architecture
 
-Each supported language has:
+Each supported language (25+ languages including Python, TypeScript, Go, Rust, Java, C#, etc.) has:
 1. **Language Server Implementation** in `src/solidlsp/language_servers/`
 2. **Runtime Dependencies** - Automatic language server downloads when needed
 3. **Test Repository** in `test/resources/repos/<language>/`
@@ -64,6 +71,13 @@ Each supported language has:
 - **Project-specific knowledge** persistence across sessions
 - **Contextual retrieval** based on relevance
 - **Onboarding support** for new projects
+- **Indexing system** for faster symbol discovery in large codebases
+
+### MCP Integration
+
+- **MCP Server** (`src/serena/mcp.py`) - Exposes tools via Model Context Protocol
+- **Dashboard** (`src/serena/dashboard.py`) - Web-based log viewer and control interface
+- **CLI** (`src/serena/cli.py`) - Command-line interface for project management and configuration
 
 ## Development Patterns
 
@@ -97,17 +111,21 @@ Configuration is loaded from (in order of precedence):
 
 ## Key Implementation Notes
 
-- **Symbol-based editing** - Uses LSP for precise code manipulation
-- **Caching strategy** - Reduces language server overhead
-- **Error recovery** - Automatic language server restart on crashes
-- **Multi-language support** - 16+ languages with LSP integration
-- **MCP protocol** - Exposes tools to AI agents via Model Context Protocol
-- **Async operation** - Non-blocking language server interactions
+- **Symbol-based editing** - Uses LSP for precise code manipulation with semantic understanding
+- **Caching strategy** - Multi-level caching reduces language server overhead and improves performance
+- **Error recovery** - Automatic language server restart on crashes with graceful degradation
+- **Multi-language support** - 25+ languages with LSP integration, unified through SolidLSP wrapper
+- **MCP protocol** - Exposes tools to AI agents via Model Context Protocol for broad client compatibility
+- **Async operation** - Non-blocking language server interactions with thread pool execution
+- **Project activation** - Per-project configuration and language server management
+- **Tool registry** - Dynamic tool discovery and registration based on context/mode configuration
 
 ## Working with the Codebase
 
-- Project uses Python 3.11 with `uv` for dependency management
-- Strict typing with mypy, formatted with black + ruff
-- Language servers run as separate processes with LSP communication
-- Memory system enables persistent project knowledge
-- Context/mode system allows workflow customization
+- **Python 3.11** with `uv` for dependency management and reproducible environments
+- **Strict typing** with mypy, formatted with ruff + black (ruff runs first for speed)
+- **Language servers** run as separate processes with LSP communication through SolidLSP
+- **Memory system** enables persistent project knowledge through markdown files
+- **Context/mode system** allows workflow customization for different client environments
+- **Testing strategy** uses pytest markers for language-specific tests and snapshot testing
+- **Configuration hierarchy**: CLI args → project config → user config → defaults
