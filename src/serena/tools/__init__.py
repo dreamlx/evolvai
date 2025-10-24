@@ -8,6 +8,7 @@ from .legacy_memory_tools import *  # Backward compatibility for deprecated tool
 # Use legacy_memory_tools for backward compatibility
 from .intelligent_tools import *  # New intelligent memory system
 from .coding_standards_tools import *  # Coding standards and conventions
+from .advanced_intelligent_tools import *  # Complete AI optimization system
 from .cmd_tools import *
 from .config_tools import *
 from .workflow_tools import *
