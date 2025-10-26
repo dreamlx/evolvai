@@ -3,16 +3,24 @@ build-backend = "hatchling.build"
 requires = ["hatchling"]
 
 [project]
-name = "serena-agent"
-version = "0.1.4"
-description = ""
-authors = [{ name = "Oraios AI", email = "info@oraios-ai.de" }]
+name = "evolvai"
+version = "0.1.0"
+description = "🧠 智能开发环境学习助手 - 让 AI 编程助手理解你的开发环境和编码习惯"
+authors = [{ name = "EvolvAI Contributors", email = "contributors@evolvai.dev" }]
+maintainers = [{ name = "dreamlx", email = "dreamlx@github.com" }]
 readme = "README.md"
 requires-python = ">=3.11, <3.12"
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3.11",
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Code Generators",
+  "Topic :: Software Development :: Quality Assurance",
+  "Operating System :: OS Independent",
 ]
+keywords = ["ai", "development", "environment", "coding", "assistant", "optimization", "learning"]
 dependencies = [
   "requests>=2.32.3,<3",
   "pyright>=1.1.396,<2",
@@ -43,9 +51,9 @@ publish-url = "https://test.pypi.org/legacy/"
 explicit = true
 
 [project.scripts]
-serena = "serena.cli:top_level"
-serena-mcp-server = "serena.cli:start_mcp_server"
-index-project = "serena.cli:index_project"        # deprecated
+evolvai = "serena.cli:top_level"
+evolvai-mcp-server = "serena.cli:start_mcp_server"
+evolvai-index = "serena.cli:index_project"
 
 [project.license]
 text = "MIT"
@@ -69,7 +77,10 @@ agno = ["agno>=1.2.6", "sqlalchemy>=2.0.40"]
 google = ["google-genai>=1.8.0"]
 
 [project.urls]
-Homepage = "https://github.com/oraios/serena"
+Homepage = "https://github.com/dreamlx/evolvai"
+Repository = "https://github.com/dreamlx/evolvai"
+Documentation = "https://github.com/dreamlx/evolvai#readme"
+"Bug Tracker" = "https://github.com/dreamlx/evolvai/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/serena", "src/interprompt", "src/solidlsp"]
