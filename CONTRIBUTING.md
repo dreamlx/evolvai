@@ -1,37 +1,172 @@
-# Contributing to Serena
+# 贡献指南 - Contributing to EvolvAI
 
-Serena is under active development. We are just discovering what it can do and where the limitations lie.
+感谢您对 EvolvAI 项目的关注！我们欢迎各种形式的贡献。
 
-Feel free to share your learnings by opening new issues, feature requests and extensions.
+## 🤝 如何贡献
 
-## Developer Environment Setup
+### 🐛 报告问题
+- 使用 [Issues](https://github.com/dreamlx/evolvai/issues) 报告 bug
+- 提供详细的重现步骤和环境信息
+- 包含相关的错误日志和截图
 
-You can have a local setup via `uv` or a docker interpreter-based setup. 
-The repository is also configured to seamlessly work within a GitHub Codespace. See the instructions
-for the various setup scenarios below.
+### 💡 提出功能建议
+- 在 Issues 中描述功能需求和使用场景
+- 说明该功能如何改善开发体验
+- 提供设计思路或参考实现
 
-Independently of how the setup was done, the virtual environment can be 
-created and activated via `uv` (see below), and the various tasks like formatting, testing, and documentation building
-can be executed using `poe`. For example, `poe format` will format the code, including the 
-notebooks. Just run `poe` to see the available commands.
+### 🔧 提交代码
 
-### Python (uv) setup
+#### 开发环境设置
+```bash
+# 克隆仓库
+git clone https://github.com/dreamlx/evolvai.git
+cd evolvai
 
-You can install a virtual environment with the required as follows
+# 安装依赖
+pip install -e ".[dev]"
 
-1. Create a new virtual environment: `uv venv`
-2. Activate the environment:
-    * On Linux/Unix/macOS or Windows with Git Bash: `source .venv/bin/activate`
-    * On Windows outside of Git Bash: `.venv\Scripts\activate.bat` (in cmd/ps) or `source .venv/Scripts/activate` (in git-bash) 
-3. Install the required packages with all extras: `uv pip install --all-extras -r pyproject.toml -e .`
+# 运行测试
+uv run poe test
 
-## Running Tools Locally
+# 代码格式化
+uv run poe format
 
-The Serena tools (and in fact all Serena code) can be executed without an LLM, and also without
-any MCP specifics (though you can use the mcp inspector, if you want).
+# 类型检查
+uv run poe type-check
+```
 
-An example script for running tools is provided in [scripts/demo_run_tools.py](scripts/demo_run_tools.py).
+#### 开发流程
+1. Fork 仓库到您的 GitHub 账户
+2. 创建功能分支：`git checkout -b feature/your-feature-name`
+3. 提交更改：`git commit -m "feat: add your feature"`
+4. 推送到您的 fork：`git push origin feature/your-feature-name`
+5. 创建 Pull Request
 
-## Adding a New Supported Language
+#### 代码规范
+- 遵循 PEP 8 Python 编码规范
+- 使用有意义的变量和函数名
+- 添加适当的注释和文档字符串
+- 确保所有测试通过
 
-See the corresponding [memory](.serena/memories/adding_new_language_support_guide.md).
+## 🎯 贡献方向
+
+### 🌍 环境支持扩展
+- **Windows 环境**：PowerShell, CMD 检测和优化
+- **Linux 桌面环境**：GNOME, KDE 等环境适配
+- **容器化环境**：Docker, Podman, Kubernetes 支持
+- **云开发环境**：GitHub Codespaces, Gitpod 集成
+
+### 📝 编程语言支持
+- **Rust**：Cargo, rustfmt, clippy 集成
+- **Go**：go mod, golangci-lint 集成
+- **TypeScript**：tsconfig, ESLint, Prettier 集成
+- **Java/Kotlin**：Gradle, Maven, Ktlint 集成
+- **C#**：.NET CLI, dotnet format 集成
+
+### 🤖 AI 工具集成
+- **GitHub Copilot**：深度集成和优化建议
+- **Cursor**：环境感知和上下文提供
+- **Tabnine**：代码补全优化
+- **Amazon CodeWhisperer**：环境适配
+- **本地 LLM**：Ollama, LM Studio 集成
+
+### 📊 高级功能
+- **可视化仪表板**：环境配置和学习进度展示
+- **团队协作**：共享编码规范和环境配置
+- **性能分析**：AI 工具使用效率统计
+- **智能推荐**：基于使用模式的工具推荐
+- **多项目管理**：跨项目环境配置同步
+
+### 📚 文档改进
+- **使用教程**：详细的功能使用指南
+- **最佳实践**：不同开发场景的配置建议
+- **故障排除**：常见问题和解决方案
+- **API 文档**：接口说明和示例代码
+
+## 🏗️ 项目结构
+
+```
+evolvai/
+├── src/evolvai/              # 核心代码
+│   ├── memory/              # 智能记忆系统
+│   ├── tools/               # AI 工具集成
+│   ├── cli/                 # 命令行接口
+│   └── integration/         # 第三方集成
+├── tests/                   # 测试套件
+├── docs/                    # 文档
+├── examples/                # 使用示例
+└── scripts/                 # 开发脚本
+```
+
+## 🧪 测试
+
+### 运行测试
+```bash
+# 运行所有测试
+uv run poe test
+
+# 运行特定测试
+uv run poe test tests/memory/
+
+# 生成覆盖率报告
+uv run poe test --cov=evolvai
+```
+
+### 添加测试
+- 为新功能添加单元测试
+- 确保测试覆盖率不低于 80%
+- 使用清晰的测试描述和断言
+
+## 📝 提交信息规范
+
+使用 [Conventional Commits](https://www.conventionalcommits.org/) 格式：
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**类型说明：**
+- `feat`: 新功能
+- `fix`: 修复 bug
+- `docs`: 文档更新
+- `style`: 代码格式调整
+- `refactor`: 代码重构
+- `test`: 测试相关
+- `chore`: 构建工具或辅助工具的变动
+
+**示例：**
+```
+feat(memory): add Rust environment detection
+
+- Implement Cargo.toml parsing for project type detection
+- Add rustfmt and clippy command optimization
+- Support Rust naming conventions (snake_case for functions)
+
+Closes #123
+```
+
+## 🏆 贡献者认可
+
+所有贡献者都会在项目中得到认可：
+
+- 在 README 中添加贡献者列表
+- 在 CHANGELOG 中记录重要贡献
+- 在发布说明中特别感谢
+
+## 📞 联系方式
+
+- **GitHub Issues**: [提交问题](https://github.com/dreamlx/evolvai/issues)
+- **讨论区**: [GitHub Discussions](https://github.com/dreamlx/evolvai/discussions)
+- **邮箱**: contributors@evolvai.dev
+
+## 📄 许可证
+
+通过贡献代码，您同意您的贡献将在 [MIT License](LICENSE) 下发布。
+
+---
+
+感谢您的贡献！🎉
