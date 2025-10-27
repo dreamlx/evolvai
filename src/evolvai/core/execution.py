@@ -129,9 +129,45 @@ class ToolExecutionEngine:
             self._audit_log.append(ctx.to_audit_record())
 
     def _pre_validation(self, tool: "Tool", ctx: ExecutionContext) -> None:
-        """Phase 1: Pre-validation checks."""
-        # Will implement in Cycle 3
-        pass
+        """Phase 1: Pre-validation checks.
+
+        Checks:
+        1. Tool activation status
+        2. Active project requirement
+        3. Language server status
+        """
+        # Import here to avoid circular dependency
+        from serena.tools.tools_base import ToolMarkerDoesNotRequireActiveProject
+
+        # Check 1: Tool activation
+        try:
+            if not tool.is_active():
+                active_tools = self._agent.get_active_tool_names()
+                raise RuntimeError(
+                    f"Error: Tool '{tool.get_name()}' is not active. "
+                    f"Active tools: {active_tools}"
+                )
+        except Exception as e:
+            raise RuntimeError(
+                f"RuntimeError while checking if tool {tool.get_name()} is active: {e}"
+            )
+
+        # Check 2: Active project requirement
+        if not isinstance(tool, ToolMarkerDoesNotRequireActiveProject):
+            if self._agent._active_project is None:
+                project_names = self._agent.serena_config.project_names
+                raise RuntimeError(
+                    "Error: No active project. Ask the user to provide the project path "
+                    f"or to select a project from this list of known projects: {project_names}"
+                )
+
+            # Check 3: Language server status
+            if (
+                self._agent.is_using_language_server()
+                and not self._agent.is_language_server_running()
+            ):
+                log.info("Language server is not running. Starting it ...")
+                self._agent.reset_language_server()
 
     def _pre_execution_with_constraints(
         self, tool: "Tool", ctx: ExecutionContext
