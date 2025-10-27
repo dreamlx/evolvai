@@ -129,3 +129,52 @@ Configuration is loaded from (in order of precedence):
 - **Context/mode system** allows workflow customization for different client environments
 - **Testing strategy** uses pytest markers for language-specific tests and snapshot testing
 - **Configuration hierarchy**: CLI args → project config → user config → defaults
+
+## Documentation Organization
+
+**IMPORTANT**: This project follows a strict documentation organization structure. Before creating, moving, or organizing any documentation files, you MUST consult:
+
+📚 **Documentation Structure Reference**: `docs/.structure.md`
+
+### Quick Rules for AI Assistants
+
+**Document Creation**:
+- ✅ Use templates from `docs/templates/`
+- ✅ Follow naming conventions (epic-{num}-{name}, story-{num}-{desc}.md)
+- ✅ Place in correct category (product/, development/, testing/, knowledge/)
+- ❌ Never create docs in project root
+- ❌ Never use Chinese directory/file names
+
+**Document Organization**:
+```
+docs/
+├── product/         # Product definitions, epics, specs, roadmap
+├── development/     # Sprints, tasks, architecture, standards
+├── testing/         # Test plans, benchmarks, reports
+├── knowledge/       # Research, lessons learned
+├── deployment/      # Setup guides, integration docs
+├── api/             # API documentation
+├── templates/       # Document templates (USE THESE!)
+└── archive/         # Archived documents by date
+```
+
+**Finding Documents**:
+- Product definition → `docs/product/definition/`
+- Current sprint → `docs/development/sprints/current/`
+- Architecture decisions → `docs/development/architecture/adrs/`
+- Document templates → `docs/templates/`
+
+**Status Markers**:
+Use status tags in document titles: `[DRAFT]`, `[REVIEW]`, `[APPROVED]`, `[ACTIVE]`, `[DEPRECATED]`, `[ARCHIVED]`
+
+### Enforcement Rules
+
+When working with documentation:
+1. **Always check** `docs/.structure.md` first
+2. **Always use** templates from `docs/templates/`
+3. **Always follow** naming conventions
+4. **Never create** random documentation files
+5. **Always update** status markers
+6. **Always link** related documents
+
+**Violation Prevention**: If unsure about document placement, read `docs/.structure.md` completely before proceeding.
