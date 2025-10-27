@@ -1,9 +1,10 @@
 """Tests for ToolExecutionEngine core functionality."""
+
 from unittest.mock import Mock
 
 import pytest
 
-from evolvai.core.execution import ExecutionContext, ExecutionPhase, ToolExecutionEngine
+from evolvai.core.execution import ToolExecutionEngine
 from serena.tools.tools_base import Tool
 
 
@@ -62,7 +63,7 @@ class TestToolExecutionEngine:
 
     def test_execute_creates_context(self, engine, mock_tool):
         """Test that execution creates proper context."""
-        result = engine.execute(mock_tool, test_arg="test")
+        engine.execute(mock_tool, test_arg="test")
 
         audit_record = engine._audit_log[0]
         assert audit_record["tool"] == "mock"

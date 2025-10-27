@@ -35,7 +35,7 @@ def mock_project(temp_project_root):
         read_only=False,
         ignore_all_files_in_gitignore=True,
         initial_prompt="",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return Project(project_root=str(temp_project_root), project_config=project_config)
 
@@ -72,7 +72,7 @@ class UserService:
 '''
 
     # Create JavaScript files with camelCase patterns
-    js_code = '''
+    js_code = """
 function getUserData() {
     const userId = 123;
     return { id: userId, name: "test_user" };
@@ -87,7 +87,7 @@ class UserService {
         return true;
     }
 }
-'''
+"""
 
     # Write Python files
     (temp_project_root / "services").mkdir()
@@ -100,11 +100,7 @@ class UserService {
     (temp_project_root / "frontend" / "User.jsx").write_text(js_code)
 
     # Create package.json for React detection
-    package_json = {
-        "name": "test-project",
-        "version": "1.0.0",
-        "dependencies": {"react": "^18.0.0"}
-    }
+    package_json = {"name": "test-project", "version": "1.0.0", "dependencies": {"react": "^18.0.0"}}
     (temp_project_root / "package.json").write_text(json.dumps(package_json))
 
 
@@ -183,6 +179,7 @@ class TestApplyCodingStandardsTool:
         """Test applying snake_case naming convention."""
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
@@ -199,6 +196,7 @@ class TestApplyCodingStandardsTool:
         """Test applying camelCase naming convention."""
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("javascript", "frontend", "camelCase", {})
 
@@ -241,11 +239,9 @@ class TestApplyCodingStandardsTool:
         """Test applying style preferences."""
         # Pre-set style preferences
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
-        standards_memory.record_style_preferences("python", {
-            "max_line_length": 88,
-            "quote_style": "double"
-        })
+        standards_memory.record_style_preferences("python", {"max_line_length": 88, "quote_style": "double"})
 
         original_code = "def test():\n    return 'single quotes'"
         result = apply_tool.apply(original_code, "python", "test.py")
@@ -257,6 +253,7 @@ class TestApplyCodingStandardsTool:
         """Test getting applied conventions information."""
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
@@ -289,18 +286,11 @@ class TestShowCodingStandardsTool:
         """Test showing saved coding standards."""
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
-        standards_memory.record_naming_convention("python", "backend", "snake_case", {
-            "function_example": "test_function"
-        })
-        standards_memory.record_style_preferences("python", {
-            "max_line_length": 88,
-            "use_black": True
-        })
-        standards_memory.record_project_pattern("detected", {
-            "has_frontend_folder": True,
-            "framework": "react"
-        })
+        standards_memory.record_naming_convention("python", "backend", "snake_case", {"function_example": "test_function"})
+        standards_memory.record_style_preferences("python", {"max_line_length": 88, "use_black": True})
+        standards_memory.record_project_pattern("detected", {"has_frontend_folder": True, "framework": "react"})
 
         result = show_tool.apply()
         result_data = json.loads(result)

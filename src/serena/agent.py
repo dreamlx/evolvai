@@ -32,6 +32,8 @@ from solidlsp import SolidLanguageServer
 if TYPE_CHECKING:
     from serena.gui_log_viewer import GuiLogViewer
 
+from evolvai.core.execution import ToolExecutionEngine
+
 log = logging.getLogger(__name__)
 TTool = TypeVar("TTool", bound="Tool")
 T = TypeVar("T")
@@ -184,6 +186,9 @@ class SerenaAgent:
 
         self._active_tools: dict[type[Tool], Tool] = {}
         self._update_active_tools()
+
+        # Initialize ToolExecutionEngine (Epic-001 Phase 0)
+        self.execution_engine = ToolExecutionEngine(agent=self, enable_constraints=False)
 
         # activate a project configuration (if provided or if there is only a single project available)
         if project is not None:

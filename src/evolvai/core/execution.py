@@ -1,4 +1,5 @@
 """Core execution engine components."""
+
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -143,14 +144,9 @@ class ToolExecutionEngine:
         try:
             if not tool.is_active():
                 active_tools = self._agent.get_active_tool_names()
-                raise RuntimeError(
-                    f"Error: Tool '{tool.get_name()}' is not active. "
-                    f"Active tools: {active_tools}"
-                )
+                raise RuntimeError(f"Error: Tool '{tool.get_name()}' is not active. " f"Active tools: {active_tools}")
         except Exception as e:
-            raise RuntimeError(
-                f"RuntimeError while checking if tool {tool.get_name()} is active: {e}"
-            )
+            raise RuntimeError(f"RuntimeError while checking if tool {tool.get_name()} is active: {e}")
 
         # Check 2: Active project requirement
         if not isinstance(tool, ToolMarkerDoesNotRequireActiveProject):
@@ -162,19 +158,13 @@ class ToolExecutionEngine:
                 )
 
             # Check 3: Language server status
-            if (
-                self._agent.is_using_language_server()
-                and not self._agent.is_language_server_running()
-            ):
+            if self._agent.is_using_language_server() and not self._agent.is_language_server_running():
                 log.info("Language server is not running. Starting it ...")
                 self._agent.reset_language_server()
 
-    def _pre_execution_with_constraints(
-        self, tool: "Tool", ctx: ExecutionContext
-    ) -> None:
+    def _pre_execution_with_constraints(self, tool: "Tool", ctx: ExecutionContext) -> None:
         """Phase 2: Pre-execution with constraints (Epic-001)."""
         # Placeholder for Epic-001 integration
-        pass
 
     def _execute_tool(self, tool: "Tool", ctx: ExecutionContext) -> str:
         """Phase 3: Actual tool execution.
@@ -195,10 +185,7 @@ class ToolExecutionEngine:
         except SolidLSPException as e:
             # Handle LSP termination with retry
             if e.is_language_server_terminated():
-                log.error(
-                    f"Language server terminated while executing tool ({e}). "
-                    "Restarting the language server and retrying ..."
-                )
+                log.error(f"Language server terminated while executing tool ({e}). " "Restarting the language server and retrying ...")
                 self._agent.reset_language_server()
                 # Retry execution
                 result = apply_fn(**ctx.kwargs)
@@ -231,9 +218,7 @@ class ToolExecutionEngine:
 
     # Audit Log Interface (Cycle 6)
 
-    def get_audit_log(
-        self, tool_name: str | None = None
-    ) -> list[dict[str, Any]]:
+    def get_audit_log(self, tool_name: str | None = None) -> list[dict[str, Any]]:
         """Get audit log with optional filtering.
 
         :param tool_name: Optional tool name to filter by
@@ -270,14 +255,10 @@ class ToolExecutionEngine:
         return {
             "total_executions": len(self._audit_log),
             "total_tokens": total_tokens,
-            "average_tokens": (
-                total_tokens / len(self._audit_log) if self._audit_log else 0
-            ),
+            "average_tokens": (total_tokens / len(self._audit_log) if self._audit_log else 0),
             "successful_executions": len(successful),
             "failed_executions": len(failed),
-            "success_rate": (
-                len(successful) / len(self._audit_log) if self._audit_log else 0
-            ),
+            "success_rate": (len(successful) / len(self._audit_log) if self._audit_log else 0),
         }
 
     def get_slow_tools(self, threshold_seconds: float = 1.0) -> list[dict[str, Any]]:
@@ -286,11 +267,7 @@ class ToolExecutionEngine:
         :param threshold_seconds: Duration threshold in seconds
         :return: List of slow tool executions
         """
-        slow_tools = [
-            record
-            for record in self._audit_log
-            if record["duration"] > threshold_seconds
-        ]
+        slow_tools = [record for record in self._audit_log if record["duration"] > threshold_seconds]
         # Sort by duration (slowest first)
         slow_tools.sort(key=lambda x: x["duration"], reverse=True)
         return slow_tools

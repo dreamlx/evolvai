@@ -15,7 +15,6 @@ from serena.prompt_factory import PromptFactory
 from serena.symbol import LanguageServerSymbolRetriever
 from serena.util.class_decorators import singleton
 from serena.util.inspection import iter_subclasses
-from solidlsp.ls_exceptions import SolidLSPException
 
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
@@ -226,57 +225,20 @@ class Tool(Component):
         """
 
         def task() -> str:
-            apply_fn = self.get_apply_fn()
-
-            try:
-                if not self.is_active():
-                    return f"Error: Tool '{self.get_name_from_cls()}' is not active. Active tools: {self.agent.get_active_tool_names()}"
-            except Exception as e:
-                return f"RuntimeError while checking if tool {self.get_name_from_cls()} is active: {e}"
-
             if log_call:
                 self._log_tool_application(inspect.currentframe())
+
+            # Use ToolExecutionEngine for unified 4-phase execution
             try:
-                # check whether the tool requires an active project and language server
-                if not isinstance(self, ToolMarkerDoesNotRequireActiveProject):
-                    if self.agent._active_project is None:
-                        return (
-                            "Error: No active project. Ask the user to provide the project path or to select a project from this list of known projects: "
-                            + f"{self.agent.serena_config.project_names}"
-                        )
-                    if self.agent.is_using_language_server() and not self.agent.is_language_server_running():
-                        log.info("Language server is not running. Starting it ...")
-                        self.agent.reset_language_server()
-
-                # apply the actual tool
-                try:
-                    result = apply_fn(**kwargs)
-                except SolidLSPException as e:
-                    if e.is_language_server_terminated():
-                        log.error(f"Language server terminated while executing tool ({e}). Restarting the language server and retrying ...")
-                        self.agent.reset_language_server()
-                        result = apply_fn(**kwargs)
-                    else:
-                        raise
-
-                # record tool usage
-                self.agent.record_tool_usage_if_enabled(kwargs, result, self)
-
+                result = self.agent.execution_engine.execute(self, **kwargs)
             except Exception as e:
                 if not catch_exceptions:
                     raise
-                msg = f"Error executing tool: {e}"
-                log.error(f"Error executing tool: {e}", exc_info=e)
-                result = msg
+                # Exception already logged by execution engine
+                result = f"Error executing tool: {e}"
 
             if log_call:
                 log.info(f"Result: {result}")
-
-            try:
-                if self.agent.language_server is not None:
-                    self.agent.language_server.save_cache()
-            except Exception as e:
-                log.error(f"Error saving language server cache: {e}")
 
             return result
 

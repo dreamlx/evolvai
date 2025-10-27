@@ -1,4 +1,5 @@
 """Tests for audit log and TPST analysis functionality."""
+
 from unittest.mock import Mock
 
 import pytest

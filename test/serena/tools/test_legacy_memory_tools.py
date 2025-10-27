@@ -36,7 +36,7 @@ def mock_project(temp_project_root):
         read_only=False,
         ignore_all_files_in_gitignore=True,
         initial_prompt="",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return Project(project_root=str(temp_project_root), project_config=project_config)
 
@@ -272,7 +272,7 @@ class TestLegacyMemoryTools:
         assert isinstance(delete_tool, Tool)
 
         # Check they have the required apply method
-        assert hasattr(write_tool, 'apply')
-        assert hasattr(read_tool, 'apply')
-        assert hasattr(list_tool, 'apply')
-        assert hasattr(delete_tool, 'apply')
+        assert hasattr(write_tool, "apply")
+        assert hasattr(read_tool, "apply")
+        assert hasattr(list_tool, "apply")
+        assert hasattr(delete_tool, "apply")

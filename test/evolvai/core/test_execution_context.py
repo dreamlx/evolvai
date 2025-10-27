@@ -1,4 +1,5 @@
 """Tests for ExecutionContext and ExecutionPhase."""
+
 import time
 
 from evolvai.core.execution import ExecutionContext, ExecutionPhase
@@ -43,11 +44,7 @@ class TestExecutionContext:
     def test_execution_context_with_plan(self):
         """Test ExecutionContext with execution plan."""
         plan = {"steps": ["step1", "step2"]}
-        ctx = ExecutionContext(
-            tool_name="test_tool",
-            kwargs={},
-            execution_plan=plan
-        )
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={}, execution_plan=plan)
 
         assert ctx.execution_plan == plan
 

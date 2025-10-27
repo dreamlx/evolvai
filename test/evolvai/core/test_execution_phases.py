@@ -1,4 +1,5 @@
 """Tests for execution phase implementations."""
+
 from unittest.mock import Mock
 
 import pytest
@@ -204,9 +205,7 @@ class TestExecutionPhase:
         assert call_count["count"] == 2  # Called twice (failed, then retry)
         mock_agent.reset_language_server.assert_called_once()
 
-    def test_execution_does_not_retry_non_terminated_lsp_exception(
-        self, engine, mock_agent
-    ):
+    def test_execution_does_not_retry_non_terminated_lsp_exception(self, engine, mock_agent):
         """Test that non-terminated LSP exceptions are not retried."""
         from solidlsp.ls_exceptions import SolidLSPException
 
