@@ -212,6 +212,85 @@ class ToolExecutionEngine:
         return result
 
     def _post_execution(self, tool: "Tool", ctx: ExecutionContext) -> None:
-        """Phase 4: Post-execution cleanup."""
-        # Will implement in Cycle 5
-        pass
+        """Phase 4: Post-execution cleanup.
+
+        Features:
+        - Record tool usage statistics
+        - Save LSP cache if available
+        """
+        # Record tool usage for statistics
+        if hasattr(self._agent, "record_tool_usage_if_enabled") and ctx.result is not None:
+            self._agent.record_tool_usage_if_enabled(ctx.kwargs, ctx.result, tool)
+
+        # Save language server cache
+        if self._agent.language_server is not None:
+            try:
+                self._agent.language_server.save_cache()
+            except Exception as e:
+                log.error(f"Error saving language server cache: {e}")
+
+    # Audit Log Interface (Cycle 6)
+
+    def get_audit_log(
+        self, tool_name: str | None = None
+    ) -> list[dict[str, Any]]:
+        """Get audit log with optional filtering.
+
+        :param tool_name: Optional tool name to filter by
+        :return: List of audit records
+        """
+        if tool_name is None:
+            return self._audit_log.copy()
+        return [record for record in self._audit_log if record["tool"] == tool_name]
+
+    def clear_audit_log(self) -> None:
+        """Clear the audit log."""
+        self._audit_log.clear()
+
+    # TPST Analysis Interface (Cycle 7)
+
+    def analyze_tpst(self) -> dict[str, Any]:
+        """Analyze TPST (Tokens Per Solved Task) metrics.
+
+        :return: Dictionary with token statistics
+        """
+        if not self._audit_log:
+            return {
+                "total_executions": 0,
+                "total_tokens": 0,
+                "average_tokens": 0,
+                "successful_executions": 0,
+                "failed_executions": 0,
+            }
+
+        total_tokens = sum(record["tokens"] for record in self._audit_log)
+        successful = [record for record in self._audit_log if record["success"]]
+        failed = [record for record in self._audit_log if not record["success"]]
+
+        return {
+            "total_executions": len(self._audit_log),
+            "total_tokens": total_tokens,
+            "average_tokens": (
+                total_tokens / len(self._audit_log) if self._audit_log else 0
+            ),
+            "successful_executions": len(successful),
+            "failed_executions": len(failed),
+            "success_rate": (
+                len(successful) / len(self._audit_log) if self._audit_log else 0
+            ),
+        }
+
+    def get_slow_tools(self, threshold_seconds: float = 1.0) -> list[dict[str, Any]]:
+        """Get tools that exceeded duration threshold.
+
+        :param threshold_seconds: Duration threshold in seconds
+        :return: List of slow tool executions
+        """
+        slow_tools = [
+            record
+            for record in self._audit_log
+            if record["duration"] > threshold_seconds
+        ]
+        # Sort by duration (slowest first)
+        slow_tools.sort(key=lambda x: x["duration"], reverse=True)
+        return slow_tools
