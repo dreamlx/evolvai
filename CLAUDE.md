@@ -2,6 +2,36 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Overview
+
+**EvolvAI** is an AI behavior engineering platform that optimizes AI assistant efficiency through systematic behavior constraints and thinking optimization.
+
+**Project History**: EvolvAI evolved from a fork of the Serena project (LSP-based code analysis toolkit) into an independent platform focused on AI behavior optimization rather than just code tooling. While we continue to leverage Serena's mature LSP infrastructure (25+ language support), EvolvAI's core innovation is the three-Epic architecture for reducing TPST (Tokens Per Solved Task).
+
+**Core Metric**: **TPST (Tokens Per Solved Task)** = Total consumed tokens / Successfully solved tasks
+- Target: Reduce TPST by 50-70% compared to unconstrained AI behavior
+
+### Three-Epic Architecture
+
+**Epic-001: Behavior Constraints System**
+- Prevent AI from wasting tokens on inefficient behaviors
+- Core tools: `safe_search`, `safe_edit`, `safe_exec` with ExecutionPlan validation
+- Innovation: Constitutional system with batching strategies
+
+**Epic-002: Project Standards as MCP Service**
+- Reduce documentation rework and location correction token waste
+- Core capability: `.project_standards.yml` specification with validation
+- Innovation: 90% rules + 10% small-model architecture for cost optimization
+
+**Epic-003: Graph-of-Thought Engine (GoT)**
+- Reduce thinking token ratio from 40% to ≤20%
+- Core technology: Event sourcing + parallel branching + early stopping
+- Innovation: Replace sequential thinking chains with event-sourced parallel exploration
+
+**Technical Foundation**: EvolvAI builds on Serena's LSP infrastructure (SolidLanguageServer, multi-language support, symbol operations) while adding the GoT engine and behavior constraint systems as new layers.
+
+For detailed project history and positioning, see: `.serena/memories/project-history-and-repositioning.md`
+
 ## Development Commands
 
 **Essential Commands (use these exact commands):**
@@ -24,21 +54,77 @@ Available pytest markers for selective testing:
 
 ## Architecture Overview
 
-Serena is a semantic code analysis and editing toolkit that provides IDE-like capabilities to AI agents through the Model Context Protocol (MCP):
+**EvolvAI Architecture Stack**:
+```
+┌─────────────────────────────────────────┐
+│   AI Agent (Claude, GPT, etc.)         │
+└─────────────────┬───────────────────────┘
+                  │ MCP Protocol
+┌─────────────────▼───────────────────────┐
+│  EvolvAI Platform (New Layers)          │
+│  ┌───────────────────────────────────┐  │
+│  │ Epic-003: GoT Engine              │  │ ← Event sourcing, parallel thinking
+│  │ - Event Store + Session Mgmt      │  │
+│  │ - Parallel branching + Early stop │  │
+│  └───────────────┬───────────────────┘  │
+│                  │                       │
+│  ┌───────────────▼───────────────────┐  │
+│  │ Epic-001: Behavior Constraints    │  │ ← Safe operations with validation
+│  │ - ExecutionPlan validation        │  │
+│  │ - safe_search/edit/exec           │  │
+│  └───────────────┬───────────────────┘  │
+│                  │                       │
+│  ┌───────────────▼───────────────────┐  │
+│  │ Epic-002: Project Standards MCP   │  │ ← Document validation
+│  │ - .project_standards.yml          │  │
+│  │ - 90% rules + 10% small model     │  │
+│  └───────────────┬───────────────────┘  │
+└──────────────────┼───────────────────────┘
+                   │
+┌──────────────────▼───────────────────────┐
+│  Serena Infrastructure (Foundation)      │ ← Inherited from upstream
+│  - SolidLanguageServer (LSP wrapper)     │
+│  - Multi-language support (25+)          │
+│  - Symbol operations & navigation        │
+│  - Project memory system                 │
+└──────────────────────────────────────────┘
+```
 
 ### Core Components
 
-**1. SerenaAgent (`src/serena/agent.py`)**
+**EvolvAI Components** (New):
+
+**1. Graph-of-Thought Engine** (`src/evolvai/got/` - *planned*)
+- Event sourcing system for thinking traces
+- Parallel branch management and early stopping
+- Session checkpoint/restore capabilities
+- Target: Reduce thinking tokens from 40% to ≤20%
+
+**2. Behavior Constraints System** (`src/evolvai/constraints/` - *planned*)
+- ExecutionPlan schema validation
+- safe_search/safe_edit/safe_exec wrappers
+- Batching strategies for efficient operations
+- Target: Prevent wasteful token-burning behaviors
+
+**3. Project Standards MCP** (`src/evolvai/standards/` - *planned*)
+- .project_standards.yml specification parser
+- Rule-based validators (location, structure, naming)
+- Small-model principle scorer (cost-optimized)
+- Target: Reduce documentation rework by 40%
+
+**Serena Infrastructure Components** (Inherited):
+
+**4. SerenaAgent** (`src/serena/agent.py`)
 - Central orchestrator managing projects, tools, and user interactions
 - Coordinates language servers, memory persistence, and MCP server interface
 - Manages tool registry and context/mode configurations
 
-**2. SolidLanguageServer (`src/solidlsp/ls.py`)**  
+**5. SolidLanguageServer** (`src/solidlsp/ls.py`)
 - Unified wrapper around Language Server Protocol (LSP) implementations
 - Provides language-agnostic interface for symbol operations
 - Handles caching, error recovery, and multiple language server lifecycle
 
-**3. Tool System (`src/serena/tools/`)**
+**6. Tool System** (`src/serena/tools/`)
 - **file_tools.py** - File system operations, search, regex replacements
 - **symbol_tools.py** - Language-aware symbol finding, navigation, editing
 - **memory_tools.py** - Project knowledge persistence and retrieval
@@ -46,12 +132,12 @@ Serena is a semantic code analysis and editing toolkit that provides IDE-like ca
 - **workflow_tools.py** - Onboarding and meta-operations
 - **jetbrains_tools.py** - JetBrains IDE integration
 
-**4. Configuration System (`src/serena/config/`)**
+**7. Configuration System** (`src/serena/config/`)
 - **Contexts** - Define tool sets for different environments (desktop-app, agent, ide-assistant, codex)
 - **Modes** - Operational patterns (planning, editing, interactive, one-shot, onboarding)
 - **Projects** - Per-project settings and language server configs
 
-**5. Language Server Infrastructure (`src/solidlsp/`)**
+**8. Language Server Infrastructure** (`src/solidlsp/`)
 - **SolidLanguageServer** - Unified wrapper around LSP implementations
 - **language_servers/** - Individual language server adapters for 25+ languages
 - **Caching system** - Reduces language server overhead with intelligent caching
