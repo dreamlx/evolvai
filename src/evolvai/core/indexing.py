@@ -6,22 +6,20 @@ EvolvAI Smart Indexing System
 """
 
 import hashlib
-import sqlite3
-import threading
-import time
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
-from dataclasses import dataclass, asdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
 import os
+import sqlite3
 import subprocess
-from datetime import datetime
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Optional
 
 
 @dataclass
 class FileIndex:
     """文件索引信息"""
+
     path: str
     hash: str
     size: int
@@ -34,6 +32,7 @@ class FileIndex:
 @dataclass
 class SymbolIndex:
     """符号索引信息"""
+
     name: str
     file_path: str
     line: int
@@ -46,6 +45,7 @@ class SymbolIndex:
 @dataclass
 class CacheEntry:
     """缓存条目"""
+
     key: str
     content: str
     hash: str
@@ -68,9 +68,9 @@ class SmartIndexingSystem:
         self._init_database()
 
         # 内存缓存
-        self._file_cache: Dict[str, FileIndex] = {}
-        self._symbol_cache: Dict[str, List[SymbolIndex]] = {}
-        self._content_cache: Dict[str, CacheEntry] = {}
+        self._file_cache: dict[str, FileIndex] = {}
+        self._symbol_cache: dict[str, list[SymbolIndex]] = {}
+        self._content_cache: dict[str, CacheEntry] = {}
 
         # 配置
         self.max_cache_size = 1000
@@ -231,7 +231,7 @@ class SmartIndexingSystem:
             return None
 
     def index_directory(self, max_files: Optional[int] = None,
-                        parallel: bool = True) -> Tuple[int, float]:
+                        parallel: bool = True) -> tuple[int, float]:
         """索引目录"""
         start_time = time.time()
 
@@ -268,7 +268,7 @@ class SmartIndexingSystem:
 
         return indexed_count, index_time
 
-    def _index_files_parallel(self, files: List[Path]) -> int:
+    def _index_files_parallel(self, files: list[Path]) -> int:
         """并行索引文件"""
         indexed_count = 0
 
@@ -289,7 +289,7 @@ class SmartIndexingSystem:
 
         return indexed_count
 
-    def _index_files_sequential(self, files: List[Path]) -> int:
+    def _index_files_sequential(self, files: list[Path]) -> int:
         """顺序索引文件"""
         indexed_count = 0
 
@@ -342,12 +342,12 @@ class SmartIndexingSystem:
 
         return None
 
-    def search_files(self, pattern: str, max_results: int = 100) -> List[FileIndex]:
+    def search_files(self, pattern: str, max_results: int = 100) -> list[FileIndex]:
         """搜索文件"""
         # 使用 ripgrep 进行高效搜索
         try:
             cmd = ['rg', '--files', '--max-count', str(max_results), pattern, str(self.project_root)]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
 
             if result.returncode == 0:
                 files = []
@@ -373,7 +373,7 @@ class SmartIndexingSystem:
 
             return [FileIndex(*row) for row in cursor.fetchall()]
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         total_requests = self.stats['cache_hits'] + self.stats['cache_misses']
         hit_rate = (self.stats['cache_hits'] / total_requests * 100
