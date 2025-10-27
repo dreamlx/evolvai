@@ -15,10 +15,10 @@ from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
 from serena.tools.advanced_intelligent_tools import (
-    OptimizeAIToolsTool,
     GenerateOptimizedCodeTool,
+    OptimizeAIToolsTool,
+    ResetIntelligentMemoryTool,
     ShowIntelligentMemoryStatusTool,
-    ResetIntelligentMemoryTool
 )
 
 

@@ -4,8 +4,6 @@ Tests for EnvironmentPreferenceMemory component.
 Tests environment preference learning, storage, and retrieval functionality.
 """
 
-import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch

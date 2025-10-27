@@ -14,11 +14,7 @@ import pytest
 from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
-from serena.tools.coding_standards_tools import (
-    AnalyzeCodingStandardsTool,
-    ApplyCodingStandardsTool,
-    ShowCodingStandardsTool
-)
+from serena.tools.coding_standards_tools import AnalyzeCodingStandardsTool, ApplyCodingStandardsTool, ShowCodingStandardsTool
 
 
 @pytest.fixture

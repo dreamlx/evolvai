@@ -43,34 +43,144 @@
 
 ---
 
-## 📦 包含的Features
+## 📦 开发阶段
 
-### Feature 1: ExecutionPlan Schema
-- **Feature ID**: FEATURE-001
-- **描述**: 实现ExecutionPlan Pydantic模型，包含dry_run、validation、rollback等强制字段
-- **优先级**: [P0]
-- **估算**: 2人天
-- **状态**: [In Progress]
+### Phase 0: 工具调用链路简化（优先级最高⭐）
 
-### Feature 2: safe_search Wrapper
-- **Feature ID**: FEATURE-002
-- **描述**: 智能协调ripgrep/ugrep/grep，自动选择最佳工具并提供统一JSON输出
+**为什么优先**：Epic-001 的约束系统需要统一的执行入口和完整的审计能力。当前 7 层调用链路无法满足 TPST 优化需求。
+
+#### Story 0.1: 实现 ToolExecutionEngine
+- **描述**: 创建统一执行引擎，实现 4 阶段执行流程和 ExecutionContext
 - **优先级**: [P0]
-- **估算**: 2人天
+- **估算**: 5人天
 - **状态**: [Backlog]
+- **关键交付物**:
+  - `ExecutionPhase` 枚举
+  - `ExecutionContext` 数据类（完整审计信息）
+  - `ToolExecutionEngine` 类（4 阶段流程）
+  - 审计日志接口
+  - TPST 分析接口
 
-### Feature 3: safe_edit Patch-First
-- **Feature ID**: FEATURE-003
-- **描述**: 使用difflib生成统一diff，git apply应用，propose和apply阶段保持一致
+#### Story 0.2: 集成到 SerenaAgent
+- **描述**: 将执行引擎集成到 SerenaAgent，简化 Tool.apply_ex()
 - **优先级**: [P0]
 - **估算**: 3人天
 - **状态**: [Backlog]
+- **关键交付物**:
+  - SerenaAgent 创建执行引擎
+  - Tool.apply_ex() 委托给执行引擎
+  - Feature flag 配置（`enable_constraints`）
+  - 向后兼容性验证
 
-### Feature 4: safe_exec Process Management
+#### Story 0.3: 回归测试和性能验证
+- **描述**: 验证简化后的链路正确性和性能
+- **优先级**: [P0]
+- **估算**: 2人天
+- **状态**: [Backlog]
+- **关键交付物**:
+  - 所有现有测试通过
+  - 审计日志验证
+  - 性能基准测试
+  - 文档更新
+
+---
+
+### Phase 1: ExecutionPlan 验证框架
+
+#### Feature 1.1: ExecutionPlan Schema
+- **Feature ID**: FEATURE-001
+- **描述**: 实现 ExecutionPlan Pydantic 模型
+- **优先级**: [P0]
+- **估算**: 3人天（简化后，直接集成到执行引擎）
+- **状态**: [Backlog]
+
+#### Feature 1.2: PlanValidator
+- **Feature ID**: FEATURE-002
+- **描述**: 实现计划合理性验证器
+- **优先级**: [P0]
+- **估算**: 4人天
+- **状态**: [Backlog]
+
+#### Feature 1.3: 集成到 ToolExecutionEngine
+- **Feature ID**: FEATURE-003
+- **描述**: 将验证器集成到执行引擎的 pre-execution 阶段
+- **优先级**: [P0]
+- **估算**: 2人天（简化后，单一注入点）
+- **状态**: [Backlog]
+
+---
+
+### Phase 2: Safe Operations Wrapper System
+
+#### Feature 2.1: safe_search wrapper
 - **Feature ID**: FEATURE-004
-- **描述**: 使用os.setsid和os.killpg管理进程组，确保timeout时完全清理
+- **描述**: 实现 safe_search，增加 scope 限制
+- **优先级**: [P0]
+- **估算**: 4人天
+- **状态**: [Backlog]
+
+#### Feature 2.2: safe_edit wrapper
+- **Feature ID**: FEATURE-005
+- **描述**: 实现 safe_edit，增加 impact 评估
+- **优先级**: [P0]
+- **估算**: 7人天
+- **状态**: [Backlog]
+
+#### Feature 2.3: safe_exec wrapper
+- **Feature ID**: FEATURE-006
+- **描述**: 实现 safe_exec，增加 precondition 检查
 - **优先级**: [P1]
-- **估算**: 1.5人天
+- **估算**: 3人天
+- **状态**: [Backlog]
+
+---
+
+### Phase 3: Intelligent Batching Engine
+
+#### Feature 3.1: 操作序列分析器
+- **Feature ID**: FEATURE-007
+- **描述**: 分析 ExecutionPlan，识别可批处理的模式
+- **优先级**: [P1]
+- **估算**: 5人天
+- **状态**: [Backlog]
+
+#### Feature 3.2: 批处理转换器
+- **Feature ID**: FEATURE-008
+- **描述**: 将多个操作转换为单个批处理操作
+- **优先级**: [P1]
+- **估算**: 7人天
+- **状态**: [Backlog]
+
+#### Feature 3.3: 批处理执行器
+- **Feature ID**: FEATURE-009
+- **描述**: 执行批处理操作，返回结果映射
+- **优先级**: [P1]
+- **估算**: 5人天
+- **状态**: [Backlog]
+
+---
+
+### Phase 4: Constitutional Constraints System
+
+#### Feature 4.1: 约束规则 DSL
+- **Feature ID**: FEATURE-010
+- **描述**: 创建声明式规则定义语言
+- **优先级**: [P0]
+- **估算**: 5人天
+- **状态**: [Backlog]
+
+#### Feature 4.2: 约束规则引擎
+- **Feature ID**: FEATURE-011
+- **描述**: 执行约束规则，判断操作是否违反约束
+- **优先级**: [P0]
+- **估算**: 6人天
+- **状态**: [Backlog]
+
+#### Feature 4.3: 规则配置系统
+- **Feature ID**: FEATURE-012
+- **描述**: 支持从 YAML 加载约束规则
+- **优先级**: [P1]
+- **估算**: 3人天
 - **状态**: [Backlog]
 
 ---
@@ -78,17 +188,23 @@
 ## 📊 时间线
 
 ### 预计时间
-- **开始日期**: 2025-10-27
-- **结束日期**: 2025-11-02
-- **总工作量**: 8.5人天 (约1周，MVP Week 1)
+- **开始日期**: 2025-10-28
+- **Phase 0 完成**: 2025-11-03 (10人天)
+- **Phase 1 完成**: 2025-11-08 (9人天)
+- **Phase 2 完成**: 2025-11-15 (14人天)
+- **Phase 3 完成**: 2025-11-25 (17人天)
+- **Phase 4 完成**: 2025-12-02 (14人天)
+- **总工作量**: 64人天 (约 13 周)
 
 ### 里程碑
 - [x] Product Definition完成 - 2025-10-26
-- [ ] ExecutionPlan Schema实现 - 2025-10-28
-- [ ] safe_search实现 - 2025-10-29
-- [ ] safe_edit Patch-First实现 - 2025-10-31
-- [ ] safe_exec实现 - 2025-11-01
-- [ ] MCP集成测试 - 2025-11-02
+- [x] ADR-003: 工具链路简化决策 - 2025-10-27
+- [ ] **Phase 0 完成** - 2025-11-03 ⭐ 关键里程碑
+- [ ] Phase 1 完成（ExecutionPlan 验证） - 2025-11-08
+- [ ] Phase 2 完成（Safe Operations） - 2025-11-15
+- [ ] Phase 3 完成（Batching Engine） - 2025-11-25
+- [ ] Phase 4 完成（Constitutional Constraints） - 2025-12-02
+- [ ] Epic-001 全面测试和文档 - 2025-12-06
 
 ---
 
@@ -151,13 +267,21 @@
 
 ## 📚 相关文档
 
+### 架构设计
+- [ADR-003: 工具调用链路简化](../../../development/architecture/adrs/003-tool-execution-engine-simplification.md) ⭐ 核心架构决策
+- [Phase 0: 工具调用链路简化 - 详细设计](../../../development/architecture/phase-0-tool-execution-engine.md)
+- [ADR-001: Graph-of-Thought over Sequential Thinking](../../../development/architecture/adrs/001-graph-of-thought-over-sequential-thinking.md)
+- [ADR-002: Monorepo with Epic-003 Future Split](../../../development/architecture/adrs/002-monorepo-with-epic-003-future-split.md)
+
+### 产品文档
 - [产品定义 v1.0](../../definition/product-definition-v1.md)
 - [讨论总结 2025-10-26](../../definition/discussion-summary-2025-10-26.md)
-- [ADR-001: Patch-First架构](../../../development/architecture/adrs/001-patch-first.md)
-- [ADR-002: Git Worktree策略](../../../development/architecture/adrs/002-git-worktree.md)
-- [Sprint-001: MVP Week 1](../../../development/sprints/current/sprint-001-mvp-week1.md)
+- [TPST Metrics Reference](../../specs/metrics-reference.md)
+
+### 开发规范
+- [Definition of Done (DoD) Standards](../../../development/standards/definition-of-done.md)
 
 ---
 
-**最后更新**: 2025-10-26
+**最后更新**: 2025-10-27
 **更新人**: EvolvAI Team

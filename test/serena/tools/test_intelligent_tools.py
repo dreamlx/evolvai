@@ -5,7 +5,6 @@ Tests environment detection, optimized command generation, and tool optimization
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -15,11 +14,7 @@ import pytest
 from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
-from serena.tools.intelligent_tools import (
-    DetectEnvironmentTool,
-    GenerateOptimizedCommandTool,
-    ShowEnvironmentPreferencesTool
-)
+from serena.tools.intelligent_tools import DetectEnvironmentTool, GenerateOptimizedCommandTool, ShowEnvironmentPreferencesTool
 
 
 @pytest.fixture

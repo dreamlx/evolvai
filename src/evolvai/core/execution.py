@@ -177,9 +177,38 @@ class ToolExecutionEngine:
         pass
 
     def _execute_tool(self, tool: "Tool", ctx: ExecutionContext) -> str:
-        """Phase 3: Actual tool execution."""
+        """Phase 3: Actual tool execution.
+
+        Features:
+        - LSP exception handling with retry
+        - Token estimation (basic)
+        """
+        from solidlsp.ls_exceptions import SolidLSPException
+
         apply_fn = tool.get_apply_fn()
-        result = apply_fn(**ctx.kwargs)
+
+        # Basic token estimation (improve in future)
+        ctx.estimated_tokens = len(str(ctx.kwargs)) // 4  # Rough estimate
+
+        try:
+            result = apply_fn(**ctx.kwargs)
+        except SolidLSPException as e:
+            # Handle LSP termination with retry
+            if e.is_language_server_terminated():
+                log.error(
+                    f"Language server terminated while executing tool ({e}). "
+                    "Restarting the language server and retrying ..."
+                )
+                self._agent.reset_language_server()
+                # Retry execution
+                result = apply_fn(**ctx.kwargs)
+            else:
+                # Re-raise non-terminated LSP exceptions
+                raise
+
+        # Rough actual token tracking (improve in future)
+        ctx.actual_tokens = len(str(result)) // 4
+
         return result
 
     def _post_execution(self, tool: "Tool", ctx: ExecutionContext) -> None:

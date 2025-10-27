@@ -6,13 +6,11 @@ Tests unified coordination of all memory components and intelligent optimization
 
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from serena.memory.intelligent_memory import SerenaIntelligentMemory
-from serena.memory.environment_preferences import EnvironmentPreferenceMemory
-from serena.memory.coding_standards import CodingStandardsMemory
 
 
 @pytest.fixture
@@ -197,8 +195,8 @@ class TestSerenaIntelligentMemory:
         """Test pruning old learning cache entries."""
         # Add cache data with different timestamps
         import datetime
-        old_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=10)
-        recent_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
+        old_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=10)
+        recent_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
 
         intelligent_memory.learning_cache["old_entry"] = {
             "timestamp": old_time.isoformat(),
@@ -278,7 +276,7 @@ class TestSerenaIntelligentMemory:
     def test_learning_cache_timestamp_format(self, mock_datetime, intelligent_memory):
         """Test that learning cache entries have proper timestamp format."""
         import datetime
-        fixed_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+        fixed_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
         mock_datetime.datetime.now.return_value = fixed_time
 
         context = {"operation": "test"}

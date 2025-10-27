@@ -146,3 +146,108 @@ class TestPreValidationPhase:
         assert result == "result: test"
         # Verify checks were called
         mock_agent.tool_is_active.assert_called()
+
+
+class TestExecutionPhase:
+    """Test Execution phase implementation."""
+
+    @pytest.fixture
+    def mock_agent(self):
+        """Create mock SerenaAgent."""
+        agent = Mock()
+        agent.serena_config = Mock()
+        agent.serena_config.tool_timeout = 60
+        agent._active_project = Mock()
+        agent.is_using_language_server = Mock(return_value=False)
+        agent.tool_is_active = Mock(return_value=True)
+        agent.language_server = None
+        return agent
+
+    @pytest.fixture
+    def engine(self, mock_agent):
+        """Create ToolExecutionEngine instance."""
+        return ToolExecutionEngine(agent=mock_agent)
+
+    def test_execution_estimates_tokens(self, engine, mock_agent):
+        """Test that execution estimates token usage."""
+        tool = MockTool(mock_agent)
+
+        result = engine.execute(tool, test_arg="test")
+
+        assert result == "result: test"
+        # Should have estimated tokens
+        audit_record = engine._audit_log[0]
+        assert "tokens" in audit_record
+
+    def test_execution_handles_lsp_exception_with_retry(self, engine, mock_agent):
+        """Test that LSP exceptions trigger language server restart and retry."""
+        from solidlsp.ls_exceptions import SolidLSPException
+        from solidlsp.ls_handler import LanguageServerTerminatedException
+
+        # Mock tool that fails first time, succeeds second time
+        call_count = {"count": 0}
+
+        class LSPFailTool(Tool):
+            def apply(self) -> str:
+                call_count["count"] += 1
+                if call_count["count"] == 1:
+                    cause = LanguageServerTerminatedException("Server terminated")
+                    raise SolidLSPException("Language server terminated", cause=cause)
+                return "success_after_retry"
+
+        mock_agent.reset_language_server = Mock()
+        tool = LSPFailTool(mock_agent)
+
+        result = engine.execute(tool)
+
+        assert result == "success_after_retry"
+        assert call_count["count"] == 2  # Called twice (failed, then retry)
+        mock_agent.reset_language_server.assert_called_once()
+
+    def test_execution_does_not_retry_non_terminated_lsp_exception(
+        self, engine, mock_agent
+    ):
+        """Test that non-terminated LSP exceptions are not retried."""
+        from solidlsp.ls_exceptions import SolidLSPException
+
+        class LSPFailTool(Tool):
+            def apply(self) -> str:
+                # Create LSP exception without LanguageServerTerminatedException cause
+                raise SolidLSPException("Some LSP error")
+
+        mock_agent.reset_language_server = Mock()
+        tool = LSPFailTool(mock_agent)
+
+        result = engine.execute(tool)
+
+        # Should fail without retry
+        assert "error" in result.lower()
+        mock_agent.reset_language_server.assert_not_called()
+
+    def test_execution_tracks_duration(self, engine, mock_agent):
+        """Test that execution tracks duration."""
+        import time
+
+        class SlowTool(Tool):
+            def apply(self) -> str:
+                time.sleep(0.01)
+                return "slow_result"
+
+        tool = SlowTool(mock_agent)
+
+        result = engine.execute(tool)
+
+        assert result == "slow_result"
+        audit_record = engine._audit_log[0]
+        assert audit_record["duration"] > 0
+
+    def test_execution_populates_context_result(self, engine, mock_agent):
+        """Test that execution populates context result."""
+        tool = MockTool(mock_agent)
+
+        result = engine.execute(tool, test_arg="hello")
+
+        assert result == "result: hello"
+        # Result should be in audit log
+        audit_record = engine._audit_log[0]
+        assert audit_record["success"] is True

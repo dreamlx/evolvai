@@ -15,13 +15,7 @@ import pytest
 from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
-from serena.tools.legacy_memory_tools import (
-    WriteMemoryTool,
-    ReadMemoryTool,
-    ListMemoriesTool,
-    DeleteMemoryTool,
-    LegacyMemoryWarning
-)
+from serena.tools.legacy_memory_tools import DeleteMemoryTool, LegacyMemoryWarning, ListMemoriesTool, ReadMemoryTool, WriteMemoryTool
 
 
 @pytest.fixture
@@ -252,7 +246,6 @@ class TestLegacyMemoryTools:
 
     def test_legacy_tools_docstrings_contain_deprecation_notice(self, write_tool, read_tool, list_tool, delete_tool):
         """Test that legacy tools have deprecation notices in docstrings."""
-
         # Check WriteMemoryTool
         assert "DEPRECATED" in WriteMemoryTool.__doc__
         assert "deprecated" in WriteMemoryTool.apply.__doc__

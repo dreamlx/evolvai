@@ -4,7 +4,6 @@ Tests for CodingStandardsMemory component.
 Tests coding standards learning, naming convention detection, and code transformation.
 """
 
-import json
 import tempfile
 from pathlib import Path
 
