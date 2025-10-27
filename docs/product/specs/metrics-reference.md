@@ -71,21 +71,22 @@ TPST = (Total_Input_Tokens + Total_Output_Tokens) / Successful_Tasks_Count
 
 **注意**: 这些基线值需要通过实际测量建立。
 
-### MVP 目标 (Week 3)
+### MVP 目标 (Week 2)
 
-**Epic-003 单独效果** (假设)：
+**Epic-001 单独效果** (假设)：
 
 | 指标 | 目标值 | 改进幅度 |
 |------|--------|---------|
 | TPST | ~35,000 tokens/task | **-30%** |
-| 思考占比 | ≤20% | 从 40% 降低 |
-| 思考回合数 | ≤3 轮 | 从 5-8 轮降低 |
-| 首次计划成功率 | ≥75% | 从 30% 提升 |
+| 首次成功率 | ≥70% | 从 30% 提升 |
+| 返工次数 | ≤2 次/task | 从 3-5 次降低 |
+| 盲目搜索占比 | ≤10% | 从 30% 降低 |
 
 **假设依据**：
-- 事件溯源减少重复思考：-15%
-- 并行分支提升探索效率：-10%
-- 早停策略减少无效探索：-5%
+- safe_search 强制限制减少无效搜索：-10%
+- safe_edit 批量操作减少返工往返：-10%
+- safe_exec 进程管理避免失控重试：-5%
+- ExecutionPlan 验证减少执行错误：-5%
 
 ### 完整版目标 (Week 6)
 
@@ -94,31 +95,33 @@ TPST = (Total_Input_Tokens + Total_Output_Tokens) / Successful_Tasks_Count
 | Epic | 贡献 | 目标 TPST | 累计改进 |
 |------|------|-----------|---------|
 | 基线 | - | 50,000 | - |
-| Epic-003 (GoT) | -30% | 35,000 | -30% |
-| + Epic-001 (Constraints) | -15% | 29,750 | -40.5% |
-| + Epic-002 (Standards) | -10% | 26,775 | -46.5% |
-| + 协同增益 | +5% | **25,000** | **-50%** |
+| Epic-001 (Constraints) | -30% | 35,000 | -30% |
+| + Epic-002 (Standards) | -10% | 31,500 | -37% |
+| + Epic-003 (GoT) | -30% | 22,050 | -55.9% |
+| + 协同增益 | +6% | **25,000** | **-50%** |
 
-**各 Epic 假设贡献**：
+**各 Epic 假设贡献**（按开发顺序）：
 
-1. **Epic-003 (GoT Engine)**: -30%
-   - 思考 token 从 40% 降至 20%
-   - 减少返工和重复探索
-
-2. **Epic-001 (Behavior Constraints)**: -15%
-   - safe_search 限制无效搜索：-5%
-   - safe_edit 批量操作减少往返：-5%
+1. **Epic-001 (Behavior Constraints)**: -30%
+   - safe_search 限制无效搜索：-10%
+   - safe_edit 批量操作减少往返：-10%
+   - safe_exec 进程管理避免失控：-5%
    - ExecutionPlan 验证减少错误：-5%
 
-3. **Epic-002 (Project Standards)**: -10%
+2. **Epic-002 (Project Standards)**: -10%
    - 文档位置自动建议：-5%
    - 结构模板减少返工：-3%
    - 规范校验早期拦截：-2%
 
-4. **协同增益**: +5%
-   - Epic-001 + Epic-003：ExecutionPlan 指导 GoT 分支
-   - Epic-002 + Epic-003：DocPlan 优化文档生成策略
-   - 三者闭环：Evidence 反馈触发 Critic 修订
+3. **Epic-003 (GoT Engine)**: -30%
+   - 思考 token 从 40% 降至 20%
+   - 并行分支探索提升效率
+   - 早停策略减少无效探索
+
+4. **协同增益**: +6% (重叠损失)
+   - Epic-001 与 Epic-003 在错误减少上有重叠
+   - Epic-002 与 Epic-003 在规划优化上有重叠
+   - 实际累计效果约 -50%（保守）至 -70%（理想）
 
 ### 理想目标 (长期)
 
@@ -170,14 +173,14 @@ TPST = (Total_Input_Tokens + Total_Output_Tokens) / Successful_Tasks_Count
 - 日志收集: MCP event logging
 - 对比脚本: `docs/testing/benchmarks/baseline-tpst.sh`
 
-### MVP 验证 (Week 3)
+### MVP 验证 (Week 2)
 
-**目标**: 验证 Epic-003 单独效果
+**目标**: 验证 Epic-001 单独效果
 
 **实验设计**:
 ```yaml
-对照组: 无 GoT 引擎 (原始 Sequential thinking)
-实验组: 启用 GoT 引擎
+对照组: 无行为约束 (原始 AI 助手操作)
+实验组: 启用 Epic-001 (safe_search/edit/exec)
 
 测试任务: 9 个 (3 仓库 × 3 任务类型)
 重复次数: 每任务 5 次
@@ -186,27 +189,29 @@ TPST = (Total_Input_Tokens + Total_Output_Tokens) / Successful_Tasks_Count
 成功标准:
   - TPST 降低 ≥ 30%
   - p < 0.05 (统计显著性)
-  - 思考占比 ≤ 20%
+  - 首次成功率 ≥ 70%
+  - 返工次数降低 ≥ 40%
 ```
 
-### 完整版验证 (Week 6)
+### 完整版验证 (Week 10)
 
 **目标**: 验证三 Epic 协同效果
 
 **实验设计**:
 ```yaml
 对照组: 无任何约束
-实验组1: 仅 Epic-003
-实验组2: Epic-003 + Epic-001
-实验组3: Epic-003 + Epic-001 + Epic-002
+实验组1: 仅 Epic-001
+实验组2: Epic-001 + Epic-002
+实验组3: Epic-001 + Epic-002 + Epic-003 (完整系统)
 
 测试任务: 同 MVP，增加文档任务
 样本量: 90 次 × 4 组 = 360 次测量
 
 成功标准:
-  - 实验组3 TPST 降低 ≥ 50%
+  - 实验组3 TPST 降低 ≥ 50% (保守目标)
   - 各 Epic 贡献度符合假设 (±10%)
-  - 协同增益可观察到
+  - 协同效应可观察到（正向或负向）
+  - 理想情况: TPST 降低达到 -70%
 ```
 
 ---
