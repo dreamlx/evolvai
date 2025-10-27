@@ -46,12 +46,18 @@
 ## 📊 **北极星指标体系**
 
 ### **Primary Metric: TPST (Tokens Per Solved Task)**
+
+> 📊 **权威指标定义**: 详见 [Metrics Reference](../specs/metrics-reference.md)
+> ⚠️  **注意**: 以下目标为假设性，需实验验证
+
 ```python
 TPST = (input_tokens + output_tokens + tool_call_tokens) / solved_tasks
 
-目标：相比传统AI助手降低50%+
-MVP目标：降低30%+
+目标：相比传统AI助手降低50%+ （假设性）
+MVP目标：降低30%+ （假设性）
 ```
+
+💡 指标说明与验证计划详见 [TPST Metrics Reference](../specs/metrics-reference.md)
 
 ### **Secondary Metrics**
 ```yaml

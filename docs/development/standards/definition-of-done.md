@@ -238,6 +238,9 @@
 
 ## 📊 TPST验证标准
 
+> 📊 **权威指标定义**: 详见 [Metrics Reference](../../product/specs/metrics-reference.md)
+> ⚠️  **注意**: 以下目标为假设性，需通过实验验证
+
 ### 基线建立
 
 **对比场景**:
