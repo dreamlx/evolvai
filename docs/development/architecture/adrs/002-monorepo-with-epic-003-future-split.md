@@ -1,3 +1,12 @@
+---
+type: decision
+category: architecture
+decision_id: ADR-002
+status: accepted
+date: 2025-10-27
+related: [epic-003]
+---
+
 # ADR 002: 单仓库架构与Epic-003后期拆分策略
 
 **状态**: [ACCEPTED]

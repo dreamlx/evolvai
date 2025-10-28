@@ -1,3 +1,12 @@
+---
+type: decision
+category: architecture
+decision_id: ADR-003
+status: approved
+date: 2025-10-27
+related: [epic-001]
+---
+
 # ADR-003: 工具调用链路简化 - ToolExecutionEngine
 
 **状态**: [APPROVED]

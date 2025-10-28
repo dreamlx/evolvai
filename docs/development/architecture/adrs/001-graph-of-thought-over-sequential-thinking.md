@@ -1,3 +1,12 @@
+---
+type: decision
+category: architecture
+decision_id: ADR-001
+status: accepted
+date: 2025-10-27
+related: [epic-003]
+---
+
 # ADR 001: 选择Graph-of-Thought而非SequentialThinking
 
 **状态**: [ACCEPTED]
