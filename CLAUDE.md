@@ -94,19 +94,27 @@ Available pytest markers for selective testing:
 
 **EvolvAI Components** (New):
 
-**1. Graph-of-Thought Engine** (`src/evolvai/got/` - *planned*)
+**1. ToolExecutionEngine** (`src/evolvai/core/execution.py` - **✅ Phase 0 Complete**)
+- Unified 4-phase execution system (PRE_VALIDATION → PRE_EXECUTION → EXECUTION → POST_EXECUTION)
+- Complete audit trail for TPST (Tokens Per Solved Task) analysis
+- Token tracking and performance monitoring (slow tools detection)
+- Foundation for Epic-001 behavior constraints integration
+- **Status**: Fully implemented and integrated into SerenaAgent (Story 0.1)
+
+**2. Graph-of-Thought Engine** (`src/evolvai/got/` - *planned*)
 - Event sourcing system for thinking traces
 - Parallel branch management and early stopping
 - Session checkpoint/restore capabilities
 - Target: Reduce thinking tokens from 40% to ≤20%
 
-**2. Behavior Constraints System** (`src/evolvai/constraints/` - *planned*)
-- ExecutionPlan schema validation
-- safe_search/safe_edit/safe_exec wrappers
-- Batching strategies for efficient operations
+**3. Behavior Constraints System** (`src/evolvai/constraints/` - *Phase 1-3 planned*)
+- **Phase 0 Complete**: ToolExecutionEngine with execution_plan support
+- **Phase 1 (Next)**: ExecutionPlan schema validation
+- **Phase 2**: safe_search/safe_edit/safe_exec wrappers
+- **Phase 3**: Batching strategies and constitutional constraints
 - Target: Prevent wasteful token-burning behaviors
 
-**3. Project Standards MCP** (`src/evolvai/standards/` - *planned*)
+**4. Project Standards MCP** (`src/evolvai/standards/` - *planned*)
 - .project_standards.yml specification parser
 - Rule-based validators (location, structure, naming)
 - Small-model principle scorer (cost-optimized)
@@ -114,17 +122,18 @@ Available pytest markers for selective testing:
 
 **Serena Infrastructure Components** (Inherited):
 
-**4. SerenaAgent** (`src/serena/agent.py`)
+**5. SerenaAgent** (`src/serena/agent.py`)
 - Central orchestrator managing projects, tools, and user interactions
 - Coordinates language servers, memory persistence, and MCP server interface
 - Manages tool registry and context/mode configurations
+- **New**: Integrated ToolExecutionEngine for unified tool execution and TPST tracking
 
-**5. SolidLanguageServer** (`src/solidlsp/ls.py`)
+**6. SolidLanguageServer** (`src/solidlsp/ls.py`)
 - Unified wrapper around Language Server Protocol (LSP) implementations
 - Provides language-agnostic interface for symbol operations
 - Handles caching, error recovery, and multiple language server lifecycle
 
-**6. Tool System** (`src/serena/tools/`)
+**7. Tool System** (`src/serena/tools/`)
 - **file_tools.py** - File system operations, search, regex replacements
 - **symbol_tools.py** - Language-aware symbol finding, navigation, editing
 - **memory_tools.py** - Project knowledge persistence and retrieval
@@ -132,12 +141,12 @@ Available pytest markers for selective testing:
 - **workflow_tools.py** - Onboarding and meta-operations
 - **jetbrains_tools.py** - JetBrains IDE integration
 
-**7. Configuration System** (`src/serena/config/`)
+**8. Configuration System** (`src/serena/config/`)
 - **Contexts** - Define tool sets for different environments (desktop-app, agent, ide-assistant, codex)
 - **Modes** - Operational patterns (planning, editing, interactive, one-shot, onboarding)
 - **Projects** - Per-project settings and language server configs
 
-**8. Language Server Infrastructure** (`src/solidlsp/`)
+**9. Language Server Infrastructure** (`src/solidlsp/`)
 - **SolidLanguageServer** - Unified wrapper around LSP implementations
 - **language_servers/** - Individual language server adapters for 25+ languages
 - **Caching system** - Reduces language server overhead with intelligent caching
@@ -197,6 +206,11 @@ Configuration is loaded from (in order of precedence):
 
 ## Key Implementation Notes
 
+- **ToolExecutionEngine** - Unified 4-phase execution system for all tools with complete audit trail
+  - All tool calls go through `SerenaAgent.execution_engine.execute(tool, **kwargs)`
+  - Automatic TPST tracking: token estimation, duration, success/failure metrics
+  - Audit log API: `get_audit_log()`, `analyze_tpst()`, `get_slow_tools()`
+  - Foundation for Epic-001 behavior constraints (execution_plan parameter ready)
 - **Symbol-based editing** - Uses LSP for precise code manipulation with semantic understanding
 - **Caching strategy** - Multi-level caching reduces language server overhead and improves performance
 - **Error recovery** - Automatic language server restart on crashes with graceful degradation
