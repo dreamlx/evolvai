@@ -2,7 +2,13 @@
 
 import pytest
 
-from evolvai.core.execution_plan import ExecutionLimits, ExecutionPlan, RollbackStrategy, RollbackStrategyType
+from evolvai.core.execution_plan import (
+    ExecutionLimits,
+    ExecutionPlan,
+    RollbackStrategy,
+    RollbackStrategyType,
+    ValidationConfig,
+)
 from evolvai.core.plan_validator import PlanValidator
 from evolvai.core.validation_result import ViolationSeverity
 
@@ -125,3 +131,68 @@ class TestPlanValidatorRollback:
         assert any("suspicious" in v.message.lower() or "destructive" in v.message.lower() for v in result.violations)
         # Should be INFO or WARNING, not ERROR
         assert all(v.severity != ViolationSeverity.ERROR for v in result.violations)
+
+
+class TestPlanValidatorValidationConfig:
+    """Test validation config consistency."""
+
+    def test_empty_validation_config_valid(self):
+        """Test empty pre_conditions and expected_outcomes is valid."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(pre_conditions=[], expected_outcomes=[]),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+
+    def test_non_empty_strings_valid(self):
+        """Test non-empty strings in validation config are valid."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(
+                pre_conditions=["git status clean", "tests passing"],
+                expected_outcomes=["file created", "no errors"],
+            ),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+
+    def test_empty_string_in_pre_conditions_invalid(self):
+        """Test empty strings in pre_conditions are invalid."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(
+                pre_conditions=["git status clean", ""],  # Empty string
+                expected_outcomes=["file created"],
+            ),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is False
+        assert result.error_count == 1
+        assert any("empty string" in v.message.lower() for v in result.violations)
+
+    def test_duplicate_conditions_warning(self):
+        """Test duplicate conditions generate warnings."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(
+                pre_conditions=["tests pass", "tests pass"],  # Duplicate
+                expected_outcomes=["success"],
+            ),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True  # Valid but with warning
+        assert result.warning_count > 0
+        assert any("duplicate" in v.message.lower() for v in result.violations)
