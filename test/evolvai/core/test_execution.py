@@ -64,3 +64,75 @@ class TestToolExecutionEngineValidation:
 
             # Verify validator was NOT called
             MockValidator.assert_not_called()
+
+    def test_valid_plan_passes_validation(self):
+        """Test that valid ExecutionPlan passes validation and tool executes successfully."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()  # Has active project
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool with all required methods
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create a valid execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+        )
+
+        # Create execution engine with constraints enabled
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Mock PlanValidator to return valid result
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            mock_validator_instance = MockValidator.return_value
+            mock_validator_instance.validate.return_value = ValidationResult(is_valid=True, violations=[])
+
+            # Execute with valid execution_plan
+            result = engine.execute(tool, execution_plan=plan)
+
+            # Verify tool was executed
+            apply_fn.assert_called_once()
+            # Verify result was returned
+            assert result == "test_result"
+
+    def test_valid_plan_recorded_in_audit_log(self):
+        """Test that successful validation with valid plan is recorded in audit log."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()  # Has active project
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool with all required methods
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create a valid execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+        )
+
+        # Create execution engine with constraints enabled
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Mock PlanValidator to return valid result
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            mock_validator_instance = MockValidator.return_value
+            mock_validator_instance.validate.return_value = ValidationResult(is_valid=True, violations=[])
+
+            # Execute with valid execution_plan
+            engine.execute(tool, execution_plan=plan)
+
+            # Verify audit log contains the execution
+            audit_log = engine.get_audit_log()
+            assert len(audit_log) == 1
+            assert audit_log[0]["tool"] == "test_tool"
+            assert audit_log[0]["success"] is True
+            assert audit_log[0]["constraints"] == []  # No violations
