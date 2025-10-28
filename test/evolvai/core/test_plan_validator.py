@@ -266,3 +266,124 @@ class TestPlanValidatorCrossField:
         assert result.is_valid is True  # Valid but with warning
         assert result.warning_count > 0
         assert any("timeout" in v.message.lower() for v in result.violations)
+
+
+class TestPlanValidatorPerformance:
+    """Test PlanValidator performance."""
+
+    def test_validation_performance(self):
+        """Test that validation completes in <1ms."""
+        import time
+
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            limits=ExecutionLimits(max_files=50, max_changes=100, timeout_seconds=60),
+            validation=ValidationConfig(
+                pre_conditions=["test1", "test2", "test3"],
+                expected_outcomes=["outcome1", "outcome2"],
+            ),
+            batch=True,
+        )
+
+        validator = PlanValidator()
+
+        # Run 100 iterations to get average
+        start = time.perf_counter()
+        for _ in range(100):
+            _ = validator.validate(plan)
+        end = time.perf_counter()
+
+        avg_time = (end - start) / 100
+        assert avg_time < 0.001  # <1ms per validation
+
+    def test_complex_plan_validation_performance(self):
+        """Test performance with complex plan."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.MANUAL,
+                commands=[f"command_{i}" for i in range(10)],
+            ),
+            limits=ExecutionLimits(max_files=100, max_changes=1000, timeout_seconds=300),
+            validation=ValidationConfig(
+                pre_conditions=[f"condition_{i}" for i in range(20)],
+                expected_outcomes=[f"outcome_{i}" for i in range(20)],
+            ),
+            batch=True,
+        )
+
+        validator = PlanValidator()
+
+        import time
+
+        start = time.perf_counter()
+        _ = validator.validate(plan)
+        end = time.perf_counter()
+
+        duration = end - start
+        assert duration < 0.001  # Still <1ms even for complex plans
+
+
+class TestPlanValidatorIntegration:
+    """Integration tests with ExecutionPlan."""
+
+    def test_typical_safe_plan(self):
+        """Test validation of typical safe execution plan."""
+        plan = ExecutionPlan(
+            dry_run=True,
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            limits=ExecutionLimits(max_files=10, max_changes=50, timeout_seconds=30),
+            validation=ValidationConfig(
+                pre_conditions=["tests passing", "git status clean"],
+                expected_outcomes=["changes applied", "no errors"],
+            ),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+        assert result.error_count == 0
+        assert result.warning_count == 0
+
+    def test_production_plan_with_rollback(self):
+        """Test validation of production execution plan."""
+        plan = ExecutionPlan(
+            dry_run=False,
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.MANUAL,
+                commands=["git revert HEAD", "git push origin main --force-with-lease"],
+            ),
+            limits=ExecutionLimits(max_files=5, max_changes=20, timeout_seconds=60),
+            validation=ValidationConfig(
+                pre_conditions=["tests pass", "code review approved", "CI green"],
+                expected_outcomes=["deployment success", "health checks pass"],
+            ),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+        # May have warnings about force push, but should be valid
+
+    def test_invalid_plan_comprehensive(self):
+        """Test validation of plan with multiple violations."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.MANUAL,
+                commands=["rm -rf /", "format c:"],  # Suspicious
+            ),
+            limits=ExecutionLimits(max_files=100, max_changes=1000, timeout_seconds=5),  # Short timeout
+            validation=ValidationConfig(
+                pre_conditions=["test", "", "test"],  # Empty + duplicate
+                expected_outcomes=["outcome"],
+            ),
+            batch=True,  # High limits with batch is ok
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is False  # Has errors (empty string)
+        assert result.error_count >= 1  # At least one error
+        assert result.warning_count >= 2  # At least two warnings (suspicious + timeout)
