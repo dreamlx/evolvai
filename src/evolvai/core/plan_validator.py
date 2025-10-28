@@ -43,8 +43,8 @@ class PlanValidator:
         # Validate validation config consistency
         violations.extend(self._validate_validation_config(plan))
 
-        # Future cycles will add validation methods here:
-        # violations.extend(self._validate_cross_field_rules(plan))
+        # Validate cross-field rules
+        violations.extend(self._validate_cross_field_rules(plan))
 
         # Determine if valid (no ERROR-level violations)
         is_valid = all(v.severity != ViolationSeverity.ERROR for v in violations)
@@ -142,6 +142,46 @@ class PlanValidator:
                     field="validation.expected_outcomes",
                     message="Duplicate expected_outcomes detected",
                     severity=ViolationSeverity.WARNING,
+                )
+            )
+
+        return violations
+
+    def _validate_cross_field_rules(self, plan: ExecutionPlan) -> list[ValidationViolation]:
+        """Validate cross-field consistency rules.
+
+        Checks for:
+        - Batch mode with insufficient limits (WARNING)
+        - High limits with short timeout (WARNING)
+
+        Args:
+            plan: The ExecutionPlan to validate
+
+        Returns:
+            List of ValidationViolations
+
+        """
+        violations = []
+
+        # Rule 1: batch=True with low limits
+        if plan.batch and (plan.limits.max_files < 3 or plan.limits.max_changes < 10):
+            violations.append(
+                ValidationViolation(
+                    field="batch",
+                    message="Batch mode enabled but limits are low (max_files < 3 or max_changes < 10)",
+                    severity=ViolationSeverity.WARNING,
+                )
+            )
+
+        # Rule 2: High limits with short timeout
+        if plan.limits.max_files > 50 and plan.limits.timeout_seconds < 30:
+            violations.append(
+                ValidationViolation(
+                    field="limits.timeout_seconds",
+                    message=f"Timeout ({plan.limits.timeout_seconds}s) may be too short for max_files={plan.limits.max_files}",
+                    severity=ViolationSeverity.WARNING,
+                    current_value=plan.limits.timeout_seconds,
+                    expected_range="≥30s recommended for large file counts",
                 )
             )
 

@@ -196,3 +196,73 @@ class TestPlanValidatorValidationConfig:
         assert result.is_valid is True  # Valid but with warning
         assert result.warning_count > 0
         assert any("duplicate" in v.message.lower() for v in result.violations)
+
+
+class TestPlanValidatorCrossField:
+    """Test cross-field validation rules."""
+
+    def test_batch_mode_with_sufficient_limits(self):
+        """Test batch=True requires sufficient limits."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            limits=ExecutionLimits(max_files=10, max_changes=50),
+            batch=True,
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+
+    def test_batch_mode_with_low_limits_warning(self):
+        """Test batch=True with low limits generates warning."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            limits=ExecutionLimits(max_files=1, max_changes=1),
+            batch=True,
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True  # Valid but with warning
+        assert result.warning_count > 0
+        assert any("batch mode" in v.message.lower() and "low" in v.message.lower() for v in result.violations)
+
+    def test_dry_run_false_requires_rollback(self):
+        """Test dry_run=False requires explicit rollback strategy."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            dry_run=False,
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True  # Valid with git_revert
+
+    def test_dry_run_true_allows_any_rollback(self):
+        """Test dry_run=True allows any rollback strategy."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.MANUAL, commands=["echo test"]),
+            dry_run=True,
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True
+
+    def test_high_limits_with_short_timeout_warning(self):
+        """Test high limits with short timeout generates warning."""
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            limits=ExecutionLimits(max_files=100, max_changes=1000, timeout_seconds=5),
+        )
+
+        validator = PlanValidator()
+        result = validator.validate(plan)
+
+        assert result.is_valid is True  # Valid but with warning
+        assert result.warning_count > 0
+        assert any("timeout" in v.message.lower() for v in result.violations)
