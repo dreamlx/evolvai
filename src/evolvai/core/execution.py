@@ -185,7 +185,7 @@ class ToolExecutionEngine:
         except SolidLSPException as e:
             # Handle LSP termination with retry
             if e.is_language_server_terminated():
-                log.error(f"Language server terminated while executing tool ({e}). " "Restarting the language server and retrying ...")
+                log.error(f"Language server terminated while executing tool ({e}). Restarting the language server and retrying ...")
                 self._agent.reset_language_server()
                 # Retry execution
                 result = apply_fn(**ctx.kwargs)
