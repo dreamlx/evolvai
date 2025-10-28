@@ -144,7 +144,7 @@ class ToolExecutionEngine:
         try:
             if not tool.is_active():
                 active_tools = self._agent.get_active_tool_names()
-                raise RuntimeError(f"Error: Tool '{tool.get_name()}' is not active. " f"Active tools: {active_tools}")
+                raise RuntimeError(f"Error: Tool '{tool.get_name()}' is not active. Active tools: {active_tools}")
         except Exception as e:
             raise RuntimeError(f"RuntimeError while checking if tool {tool.get_name()} is active: {e}")
 
