@@ -88,26 +88,46 @@
 
 ### Phase 1: ExecutionPlan 验证框架
 
-#### Feature 1.1: ExecutionPlan Schema
-- **Feature ID**: FEATURE-001
-- **描述**: 实现 ExecutionPlan Pydantic 模型
-- **优先级**: [P0]
-- **估算**: 3人天（简化后，直接集成到执行引擎）
-- **状态**: [Backlog]
+**📄 实施计划**: [Phase 1 Implementation Plan](../../../development/sprints/current/phase-1-implementation-plan.md)
 
-#### Feature 1.2: PlanValidator
-- **Feature ID**: FEATURE-002
-- **描述**: 实现计划合理性验证器
+#### Story 1.1: PlanValidator 核心实现
+- **Story ID**: STORY-1.1
+- **描述**: 实现 ExecutionPlan 合理性验证器，检查约束一致性
 - **优先级**: [P0]
 - **估算**: 4人天
 - **状态**: [Backlog]
+- **📄 TDD 计划**: [Story 1.1 TDD Plan](../../../development/sprints/current/story-1.1-tdd-plan.md)
+- **交付物**:
+  - ValidationResult 数据类 (验证结果封装)
+  - PlanValidator 类 (验证逻辑)
+  - 36+ 测试 (100% 覆盖率)
+  - 性能 <1ms
 
-#### Feature 1.3: 集成到 ToolExecutionEngine
-- **Feature ID**: FEATURE-003
-- **描述**: 将验证器集成到执行引擎的 pre-execution 阶段
+#### Story 1.2: ToolExecutionEngine 集成
+- **Story ID**: STORY-1.2
+- **描述**: 将 PlanValidator 集成到执行引擎的 pre-execution 阶段
 - **优先级**: [P0]
-- **估算**: 2人天（简化后，单一注入点）
+- **估算**: 3人天
 - **状态**: [Backlog]
+- **交付物**:
+  - 更新 ToolExecutionEngine._pre_execution_with_constraints()
+  - ConstraintViolationError 异常处理
+  - 违规记录到审计日志
+  - 向后兼容性验证
+
+#### Story 1.3: 基础约束规则
+- **Story ID**: STORY-1.3
+- **描述**: 实现基础约束检查，为 Phase 4 奠定基础
+- **优先级**: [P1]
+- **估算**: 3人天
+- **状态**: [Backlog]
+- **交付物**:
+  - ConstraintChecker 类
+  - 3 个基础约束规则 (文件数、修改数、超时)
+  - 清晰的约束规则接口
+  - 为 Phase 4 Constitutional Constraints 做准备
+
+**Phase 1 总工作量**: 10人天 (~2周)
 
 ---
 
