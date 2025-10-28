@@ -123,6 +123,9 @@ class ToolExecutionEngine:
 
             return ctx.result
 
+        except ConstraintViolationError:
+            # Re-raise constraint violations for special handling by caller
+            raise
         except Exception as e:
             ctx.error = e
             log.error(f"Error executing tool {tool.get_name()}: {e}", exc_info=e)
