@@ -377,3 +377,71 @@ class TestToolExecutionEngineValidation:
             assert audit_log[0]["success"] is False
             # Verify violation is recorded
             assert len(audit_log[0]["constraints"]) == 1
+
+
+class TestBackwardCompatibility:
+    """Test backward compatibility with existing tool calls."""
+
+    def test_execution_without_plan_unchanged(self):
+        """Test that execution without plan works exactly as before."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool with all required methods
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create execution engine (constraints don't matter without plan)
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Execute WITHOUT execution_plan (legacy behavior)
+        result = engine.execute(tool, param1="value1")
+
+        # Verify tool was executed
+        apply_fn.assert_called_once()
+        # Verify result returned
+        assert result == "test_result"
+        # Verify audit log recorded success
+        audit_log = engine.get_audit_log()
+        assert len(audit_log) == 1
+        assert audit_log[0]["success"] is True
+        assert audit_log[0]["constraints"] == []
+
+    def test_constraints_disabled_skips_validation(self):
+        """Test that constraints disabled skips validation even with execution_plan."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create an execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+        )
+
+        # Create execution engine with constraints DISABLED
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=False)
+
+        # Mock PlanValidator (should NOT be called)
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            # Execute with execution_plan but constraints disabled
+            result = engine.execute(tool, execution_plan=plan)
+
+            # Verify validator was NOT called (constraints disabled)
+            MockValidator.assert_not_called()
+            # Verify tool was executed
+            apply_fn.assert_called_once()
+            # Verify result returned
+            assert result == "test_result"
