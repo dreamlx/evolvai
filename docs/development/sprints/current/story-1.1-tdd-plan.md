@@ -2,7 +2,7 @@
 
 **Story ID**: STORY-1.1
 **Epic**: Epic-001 (Phase 1: ExecutionPlan 验证框架)
-**工期**: 4 人天
+**工期**: 3 人天 (优化后，从4人天减少)
 **风险**: 🟡 中等
 **依赖**: Story 0.2 (ExecutionPlan Schema 完成)
 **状态**: [PLANNING]
@@ -11,12 +11,14 @@
 
 ## 📋 Story 目标
 
-实现 ExecutionPlan 合理性验证器（PlanValidator），检查约束一致性、rollback 策略要求、validation 配置有效性，为 Phase 1 验证框架提供核心组件。
+实现 ExecutionPlan 合理性验证器（PlanValidator），检查**Pydantic无法验证的业务规则**，包括跨字段一致性、语义验证、业务逻辑约束，为 Phase 1 验证框架提供核心组件。
+
+**核心原则**: 避免重复验证（Pydantic已验证的边界），专注于业务规则，符合Epic-001的TPST优化目标。
 
 **交付物**：
 1. `ValidationResult` 数据类 - 验证结果封装
-2. `PlanValidator` 类 - ExecutionPlan 验证逻辑
-3. 全面的测试套件 (25+ tests, 100% coverage)
+2. `PlanValidator` 类 - ExecutionPlan 业务规则验证
+3. 全面的测试套件 (20-25 tests, 100% coverage)
 4. 性能基准 (<1ms 验证时间)
 
 ---
@@ -49,16 +51,16 @@
 Cycle 1: ValidationResult 数据类
   Red → Green → Refactor → Commit
 
-Cycle 2: Limits 边界验证
+Cycle 2: PlanValidator 基础框架 (简化)
   Red → Green → Refactor → Commit
 
-Cycle 3: Rollback 策略验证
+Cycle 3: Rollback 策略验证 (降低suspicious commands优先级)
   Red → Green → Refactor → Commit
 
 Cycle 4: Validation 配置一致性
   Red → Green → Refactor → Commit
 
-Cycle 5: 跨字段验证规则
+Cycle 5: 跨字段验证规则 (核心业务规则)
   Red → Green → Refactor → Commit
 
 Cycle 6: 性能优化和集成测试
@@ -379,7 +381,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ---
 
-## 🔴 Cycle 2: Limits 边界验证
+## 🔴 Cycle 2: PlanValidator 基础框架 (简化)
+
+**⚠️ 重要变更**: 此循环已简化，删除了与Pydantic重复的边界验证，专注于PlanValidator的基础框架。
 
 ### Red 阶段 - 编写测试
 
@@ -395,11 +399,26 @@ from evolvai.core.plan_validator import PlanValidator
 from evolvai.core.validation_result import ViolationSeverity
 
 
-class TestPlanValidatorLimits:
-    """Test limits boundary validation."""
+class TestPlanValidatorBasics:
+    """Test PlanValidator basic functionality."""
 
-    def test_valid_limits(self):
-        """Test that valid limits pass validation."""
+    def test_validator_instantiation(self):
+        """Test creating a PlanValidator instance."""
+        validator = PlanValidator()
+        assert validator is not None
+
+    def test_validate_method_exists(self):
+        """Test validate method exists and accepts ExecutionPlan."""
+        validator = PlanValidator()
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+        )
+        
+        result = validator.validate(plan)
+        assert result is not None
+
+    def test_valid_simple_plan(self):
+        """Test that a simple valid plan passes validation."""
         plan = ExecutionPlan(
             rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
             limits=ExecutionLimits(max_files=10, max_changes=50, timeout_seconds=30),
@@ -411,56 +430,37 @@ class TestPlanValidatorLimits:
         assert result.is_valid is True
         assert len(result.violations) == 0
 
-    def test_max_files_below_minimum(self):
-        """Test that max_files < 1 is caught (should be caught by Pydantic first)."""
-        # This should be caught by Pydantic validation
-        with pytest.raises(Exception):  # Pydantic ValidationError
+    def test_pydantic_validates_boundaries(self):
+        """Test that Pydantic catches boundary violations (not PlanValidator's job)."""
+        from pydantic import ValidationError
+        
+        # Pydantic should catch this, not PlanValidator
+        with pytest.raises(ValidationError) as exc_info:
             plan = ExecutionPlan(
                 rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
-                limits=ExecutionLimits(max_files=0),  # Invalid
+                limits=ExecutionLimits(max_files=0),  # Invalid boundary
             )
+        
+        # Confirm it's a Pydantic error
+        assert "max_files" in str(exc_info.value).lower()
 
-    def test_max_files_above_maximum(self):
-        """Test that max_files > 100 is caught (should be caught by Pydantic first)."""
-        with pytest.raises(Exception):  # Pydantic ValidationError
+    def test_pydantic_validates_rollback_commands(self):
+        """Test that Pydantic catches MANUAL strategy without commands."""
+        from pydantic import ValidationError
+        
+        # Pydantic should catch this, not PlanValidator
+        with pytest.raises(ValidationError) as exc_info:
             plan = ExecutionPlan(
-                rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
-                limits=ExecutionLimits(max_files=101),  # Invalid
+                rollback=RollbackStrategy(
+                    strategy=RollbackStrategyType.MANUAL,
+                    commands=[],  # Invalid: MANUAL requires commands
+                ),
             )
-
-    def test_timeout_at_boundaries(self):
-        """Test timeout at boundary values."""
-        # Min boundary
-        plan_min = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
-            limits=ExecutionLimits(timeout_seconds=1),
-        )
-
-        validator = PlanValidator()
-        result_min = validator.validate(plan_min)
-        assert result_min.is_valid is True
-
-        # Max boundary
-        plan_max = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
-            limits=ExecutionLimits(timeout_seconds=300),
-        )
-
-        result_max = validator.validate(plan_max)
-        assert result_max.is_valid is True
-
-    def test_all_limits_at_max(self):
-        """Test all limits at maximum values."""
-        plan = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
-            limits=ExecutionLimits(max_files=100, max_changes=1000, timeout_seconds=300),
-        )
-
-        validator = PlanValidator()
-        result = validator.validate(plan)
-
-        assert result.is_valid is True
+        
+        assert "manual" in str(exc_info.value).lower() or "commands" in str(exc_info.value).lower()
 ```
+
+**期望结果**: 前3个测试通过（Green）。
 
 ### Green 阶段 - 实现最小代码
 
@@ -470,6 +470,10 @@ class TestPlanValidatorLimits:
 """ExecutionPlan validation logic.
 
 Provides comprehensive validation for ExecutionPlan instances.
+
+Important: This validator focuses on BUSINESS RULES that Pydantic cannot validate.
+It does NOT duplicate Pydantic's boundary checking (max_files, timeout_seconds, etc.)
+to avoid redundant overhead and support TPST optimization goals.
 """
 
 from evolvai.core.execution_plan import ExecutionPlan
@@ -479,11 +483,15 @@ from evolvai.core.validation_result import ValidationResult, ValidationViolation
 class PlanValidator:
     """Validator for ExecutionPlan instances.
 
-    Performs comprehensive validation of ExecutionPlan fields including:
-    - Limits boundary checking (redundant with Pydantic but explicit)
-    - Rollback strategy consistency
-    - Validation config consistency
-    - Cross-field validation rules
+    Performs business rule validation for ExecutionPlan fields:
+    - Rollback strategy consistency (beyond Pydantic checks)
+    - Validation config consistency (semantic checks)
+    - Cross-field validation rules (business logic)
+    
+    Does NOT validate:
+    - Limits boundaries (already validated by Pydantic Field constraints)
+    - Required fields (already validated by Pydantic)
+    - Type checking (already validated by Pydantic)
     """
 
     def validate(self, plan: ExecutionPlan) -> ValidationResult:
@@ -497,47 +505,40 @@ class PlanValidator:
         """
         violations: list[ValidationViolation] = []
 
-        # Validate limits (redundant with Pydantic but explicit)
-        violations.extend(self._validate_limits(plan))
+        # Future cycles will add validation methods here:
+        # violations.extend(self._validate_rollback_strategy(plan))
+        # violations.extend(self._validate_validation_config(plan))
+        # violations.extend(self._validate_cross_field_rules(plan))
 
-        # Determine if valid
+        # Determine if valid (no ERROR-level violations)
         is_valid = all(v.severity != ViolationSeverity.ERROR for v in violations)
 
         return ValidationResult(is_valid=is_valid, violations=violations)
-
-    def _validate_limits(self, plan: ExecutionPlan) -> list[ValidationViolation]:
-        """Validate ExecutionLimits boundaries.
-
-        Note: Pydantic already validates these, but we perform explicit
-        checks for clarity and comprehensive error messages.
-        """
-        violations = []
-
-        # These checks are redundant with Pydantic but provide explicit validation
-        # In practice, Pydantic will catch these earlier
-
-        return violations
 ```
 
-**期望结果**: 所有测试通过（Green）。注意：因为 Pydantic 已经在 ExecutionPlan 中验证了边界，这些测试主要验证 PlanValidator 的基本框架。
+**期望结果**: 前3个测试通过（Green）。
 
 ### Refactor 阶段 - 优化代码
 
-1. 确保错误消息清晰明确
-2. 优化验证逻辑的性能
-3. 添加详细的 docstrings
+1. 添加详细的 docstrings 说明职责边界
+2. 确保类型提示完整（mypy strict 通过）
+3. 添加注释说明为什么不验证边界（避免未来混淆）
 
 ### Commit
 
 ```bash
 git add src/evolvai/core/plan_validator.py test/evolvai/core/test_plan_validator.py
-git commit -m "feat(epic1-story1.1-cycle2): Implement PlanValidator with limits validation
+git commit -m "feat(epic1-story1.1-cycle2): Implement PlanValidator basic framework
 
 - Add PlanValidator class with validate() method
-- Implement limits boundary validation (explicit checks)
-- 10 comprehensive tests for limits validation
-- Note: Pydantic handles boundaries, PlanValidator adds explicit validation
-- Performance: <0.5ms validation time
+- Focus on business rules, NOT Pydantic boundary duplication
+- 5 tests: basic functionality + Pydantic boundary verification
+- Clear documentation on validation scope and responsibilities
+- Performance: <0.1ms framework overhead
+
+Key Design Decision:
+PlanValidator validates BUSINESS RULES only, not data boundaries.
+This avoids redundant validation and supports TPST optimization.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -546,7 +547,9 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ---
 
-## 🔴 Cycle 3: Rollback 策略验证
+## 🔴 Cycle 3: Rollback 策略验证 (优先级调整)
+
+**⚠️ 重要变更**: Suspicious commands检测降低为WARNING级别，不作为主要验证内容。
 
 ### Red 阶段 - 编写测试
 
@@ -554,10 +557,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ```python
 class TestPlanValidatorRollback:
-    """Test rollback strategy validation."""
+    """Test rollback strategy validation (business rules only)."""
 
     def test_git_revert_strategy_valid(self):
-        """Test git_revert strategy with empty commands is valid."""
+        """Test git_revert strategy is valid."""
         plan = ExecutionPlan(
             rollback=RollbackStrategy(
                 strategy=RollbackStrategyType.GIT_REVERT, commands=[]
@@ -568,16 +571,6 @@ class TestPlanValidatorRollback:
         result = validator.validate(plan)
 
         assert result.is_valid is True
-
-    def test_manual_strategy_requires_commands(self):
-        """Test manual strategy with empty commands fails validation (Pydantic catches this)."""
-        # This should be caught by Pydantic field_validator
-        with pytest.raises(Exception):  # Pydantic ValidationError
-            plan = ExecutionPlan(
-                rollback=RollbackStrategy(
-                    strategy=RollbackStrategyType.MANUAL, commands=[]
-                ),
-            )
 
     def test_manual_strategy_with_commands_valid(self):
         """Test manual strategy with commands is valid."""
@@ -604,36 +597,24 @@ class TestPlanValidatorRollback:
 
         assert result.is_valid is True
 
-    def test_rollback_commands_basic_shell_syntax(self):
-        """Test rollback commands have basic shell syntax validity."""
+    def test_suspicious_commands_warning_only(self):
+        """Test suspicious commands generate INFO-level warnings (not errors)."""
         plan = ExecutionPlan(
             rollback=RollbackStrategy(
                 strategy=RollbackStrategyType.MANUAL,
-                commands=["git revert HEAD", "echo 'rollback complete'"],
+                commands=["rm -rf /"],  # Suspicious but not blocked
             ),
         )
 
         validator = PlanValidator()
         result = validator.validate(plan)
 
+        # Still valid (not blocked), but with warning
         assert result.is_valid is True
-
-    def test_rollback_commands_suspicious_syntax_warning(self):
-        """Test suspicious commands generate warnings."""
-        plan = ExecutionPlan(
-            rollback=RollbackStrategy(
-                strategy=RollbackStrategyType.MANUAL,
-                commands=["rm -rf /", "format c:"],  # Dangerous commands
-            ),
-        )
-
-        validator = PlanValidator()
-        result = validator.validate(plan)
-
-        # Should still be valid but with warnings
-        assert result.is_valid is True
-        assert result.warning_count > 0
+        assert result.warning_count >= 1
         assert any("suspicious" in v.message.lower() for v in result.violations)
+        # Should be INFO or WARNING, not ERROR
+        assert all(v.severity != ViolationSeverity.ERROR for v in result.violations)
 ```
 
 ### Green 阶段 - 实现代码
@@ -645,7 +626,6 @@ def validate(self, plan: ExecutionPlan) -> ValidationResult:
     """Validate an ExecutionPlan."""
     violations: list[ValidationViolation] = []
 
-    violations.extend(self._validate_limits(plan))
     violations.extend(self._validate_rollback_strategy(plan))  # NEW
 
     is_valid = all(v.severity != ViolationSeverity.ERROR for v in violations)
@@ -653,14 +633,15 @@ def validate(self, plan: ExecutionPlan) -> ValidationResult:
     return ValidationResult(is_valid=is_valid, violations=violations)
 
 def _validate_rollback_strategy(self, plan: ExecutionPlan) -> list[ValidationViolation]:
-    """Validate rollback strategy consistency.
+    """Validate rollback strategy business rules.
 
-    Note: Pydantic already validates MANUAL requires commands.
-    This adds additional safety checks.
+    Note: Pydantic already validates that MANUAL requires commands.
+    This adds optional safety warnings (INFO level).
     """
     violations = []
 
-    # Check for suspicious commands (warnings only)
+    # Optional: Check for suspicious commands (INFO-level warnings only)
+    # This is a "friendly reminder", not a security guarantee
     suspicious_patterns = ["rm -rf /", "format c:", "del /f /s /q"]
 
     for cmd in plan.rollback.commands:
@@ -669,8 +650,9 @@ def _validate_rollback_strategy(self, plan: ExecutionPlan) -> list[ValidationVio
                 violations.append(
                     ValidationViolation(
                         field="rollback.commands",
-                        message=f"Suspicious command detected: '{cmd}' contains '{pattern}'",
-                        severity=ViolationSeverity.WARNING,
+                        message=f"Potentially destructive command: '{cmd}' contains '{pattern}'. "
+                                f"This is a reminder, not a security check.",
+                        severity=ViolationSeverity.INFO,  # INFO, not ERROR
                         current_value=cmd,
                     )
                 )
@@ -680,20 +662,20 @@ def _validate_rollback_strategy(self, plan: ExecutionPlan) -> list[ValidationVio
 
 ### Refactor 阶段
 
-1. 提取 suspicious_patterns 为类常量
-2. 优化命令检查逻辑
-3. 添加更多 docstrings
+1. 明确suspicious commands是"友好提示"而非"安全保障"
+2. 使用INFO级别而非ERROR或WARNING
+3. 添加文档说明真正的安全应该通过沙盒实现
 
 ### Commit
 
 ```bash
-git commit -am "feat(epic1-story1.1-cycle3): Add rollback strategy validation
+git commit -am "feat(epic1-story1.1-cycle3): Add rollback strategy business rule validation
 
-- Validate rollback strategy consistency
-- Add suspicious command detection (warnings)
-- 6 comprehensive tests for rollback validation
-- Pydantic handles MANUAL requires commands
-- PlanValidator adds safety warnings
+- Validate rollback strategy business rules
+- Add suspicious command detection (INFO-level friendly reminder)
+- 4 tests for rollback validation
+- Clear documentation: this is NOT a security mechanism
+- Real security should use sandboxing/permissions
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
@@ -783,8 +765,6 @@ def validate(self, plan: ExecutionPlan) -> ValidationResult:
     """Validate an ExecutionPlan."""
     violations: list[ValidationViolation] = []
 
-    violations.extend(self._validate_limits(plan))
-    violations.extend(self._validate_rollback_strategy(plan))
     violations.extend(self._validate_validation_config(plan))  # NEW
 
     is_valid = all(v.severity != ViolationSeverity.ERROR for v in violations)
@@ -957,9 +937,6 @@ def validate(self, plan: ExecutionPlan) -> ValidationResult:
     """Validate an ExecutionPlan."""
     violations: list[ValidationViolation] = []
 
-    violations.extend(self._validate_limits(plan))
-    violations.extend(self._validate_rollback_strategy(plan))
-    violations.extend(self._validate_validation_config(plan))
     violations.extend(self._validate_cross_field_rules(plan))  # NEW
 
     is_valid = all(v.severity != ViolationSeverity.ERROR for v in violations)
@@ -1200,7 +1177,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
 ### 测试覆盖率
 
-- ✅ 36+ tests total
+- ✅ 20-25 tests total (优化后，从36+减少)
 - ✅ 100% code coverage
 - ✅ All edge cases tested
 - ✅ Performance tests included
@@ -1239,7 +1216,7 @@ Story 1.1 successfully implemented PlanValidator with comprehensive validation r
 ## Deliverables
 
 1. ✅ ValidationResult data class - 15 tests, 100% coverage
-2. ✅ PlanValidator class - 36 total tests, 100% coverage
+2. ✅ PlanValidator class - 20-25 total tests, 100% coverage
 3. ✅ Performance benchmarks - <1ms validation time achieved
 4. ✅ Integration tests - 10 comprehensive scenarios
 
@@ -1247,13 +1224,21 @@ Story 1.1 successfully implemented PlanValidator with comprehensive validation r
 
 - Zero regressions in existing tests
 - All validation rules implemented
+- No redundant validation (TPST optimized)
 - Performance targets exceeded
 - Clear error messages for all violations
 
+## TPST Optimization
+
+- ⚡ Avoided Pydantic boundary duplication
+- ⚡ Zero redundant checks
+- ⚡ <1ms validation overhead
+- ⚡ Contributes to Epic-001's 30% TPST reduction goal
+
 ## Test Results
 
-- Total tests: 36
-- Passed: 36 (100%)
+- Total tests: 20-25
+- Passed: 100%
 - Coverage: 100%
 - Performance: <1ms (target: <1ms) ✅
 
@@ -1266,6 +1251,5 @@ Story 1.1 successfully implemented PlanValidator with comprehensive validation r
 ---
 
 **Last Updated**: 2025-10-28
-**Status**: [PLANNING] - Ready for Story 1.1 kickoff
-**Next Action**: Review and approve TDD plan, then start Cycle 1
-
+**Status**: [REVISED] - Plan A optimization applied
+**Next Action**: Review revised plan, then start Cycle 1

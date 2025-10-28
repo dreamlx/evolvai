@@ -11,18 +11,23 @@
 
 Phase 1 focuses on implementing the **ExecutionPlan validation framework** that will enforce behavior constraints at the pre-execution phase. With ExecutionPlan schema already completed in Story 0.2, Phase 1 will build the validation logic and integrate it into ToolExecutionEngine.
 
+**⚡ TPST Optimization Focus**: This phase follows the principle of avoiding redundant validation to support Epic-001's goal of reducing TPST by 30%. PlanValidator focuses on business rules that Pydantic cannot validate, rather than duplicating boundary checks.
+
 ### Key Objectives
-1. Implement PlanValidator for ExecutionPlan reasonableness checking
+1. Implement PlanValidator for ExecutionPlan business rule checking (not boundary duplication)
 2. Integrate validation into ToolExecutionEngine's pre-execution phase
-3. Establish foundation for Phase 4's Constitutional Constraints system
+3. Implement runtime constraint monitoring for actual execution limits
 4. Enable dry-run mode and rollback strategy framework
 
 ### Success Criteria
-- ✅ PlanValidator validates all ExecutionPlan constraints
+- ✅ PlanValidator validates all business rule constraints (no Pydantic duplication)
 - ✅ Invalid plans rejected before execution
-- ✅ Zero overhead when constraints disabled
+- ✅ Runtime constraints monitored during execution
+- ✅ Zero validation overhead when constraints disabled
+- ✅ <5ms total validation overhead (contributes to TPST reduction)
 - ✅ 100% test coverage for validation logic
 - ✅ Clear error messages for constraint violations
+- ✅ TPST optimization: Zero redundant validation cycles
 
 ---
 
@@ -83,49 +88,56 @@ Phase 1 focuses on implementing the **ExecutionPlan validation framework** that 
 ### Story 1.1: PlanValidator Core Implementation
 
 **Priority**: [P0]
-**Estimated Effort**: 4 person-days
+**Estimated Effort**: 3 person-days (optimized from 4 person-days)
 **Status**: [Backlog]
 
-**Objective**: Implement comprehensive ExecutionPlan validation logic with TDD approach.
+**Objective**: Implement comprehensive ExecutionPlan business rule validation with TDD approach, focusing on rules that Pydantic cannot validate.
+
+**⚡ TPST Optimization**: Avoids duplicate boundary validation (already handled by Pydantic), focusing only on business logic that requires semantic understanding.
 
 **Deliverables**:
-- `src/evolvai/core/plan_validator.py` - PlanValidator class
-- `src/evolvai/core/validation_result.py` - ValidationResult data class
+- `src/evolvai/core/validation_result.py` - ValidationResult and ValidationViolation classes
+- `src/evolvai/core/plan_validator.py` - PlanValidator class (business rule focus)
 - `test/evolvai/core/test_plan_validator.py` - Comprehensive test suite
+- 📄 **Detailed TDD Plan**: [Story 1.1 TDD Plan](story-1.1-tdd-plan.md)
 
-**Validation Rules**:
-1. **Limits Validation**:
-   - max_files within bounds (1-100)
-   - max_changes within bounds (1-1000)
-   - timeout_seconds within bounds (1-300)
+**Validation Rules** (Business Logic Only):
 
-2. **Rollback Strategy Validation**:
-   - MANUAL strategy requires commands
-   - GIT_REVERT and FILE_BACKUP allow empty commands
-   - Commands are valid shell syntax (basic check)
+1. **Rollback Strategy Business Rules**:
+   - Suspicious command detection (INFO-level warnings, not security)
+   - Command syntax basic validation
+   - ⚠️ Note: MANUAL requires commands is validated by Pydantic
 
-3. **Validation Config Consistency**:
-   - pre_conditions are non-empty strings
-   - expected_outcomes are non-empty strings
-   - No duplicate conditions/outcomes
+2. **Validation Config Semantic Checks**:
+   - Empty strings in pre_conditions/expected_outcomes (ERROR)
+   - Duplicate conditions/outcomes (WARNING)
+   - String content validation (not just type checking)
 
-4. **Cross-Field Validation**:
-   - If batch=True, limits should allow multiple operations
-   - If dry_run=False, rollback must be specified
+3. **Cross-Field Business Rules** (Core TPST Optimization):
+   - batch=True with low limits warning
+   - High limits with short timeout warning
+   - dry_run + rollback strategy consistency
+   - Business logic constraints that span multiple fields
+
+**NOT Validated** (Pydantic Already Handles):
+- ❌ Limits boundaries (max_files: 1-100, already in Field)
+- ❌ Required fields (rollback required, already in schema)
+- ❌ Type checking (already handled by Pydantic)
 
 **TDD Cycles**:
 - Cycle 1: ValidationResult data class (Red → Green → Refactor)
-- Cycle 2: Limits validation (Red → Green → Refactor)
-- Cycle 3: Rollback strategy validation (Red → Green → Refactor)
-- Cycle 4: Validation config consistency (Red → Green → Refactor)
-- Cycle 5: Cross-field validation (Red → Green → Refactor)
-- Cycle 6: Integration with ExecutionPlan (Red → Green → Refactor)
+- Cycle 2: PlanValidator framework (simplified, 5 tests)
+- Cycle 3: Rollback strategy rules (4 tests, INFO-level warnings)
+- Cycle 4: Validation config consistency (5 tests)
+- Cycle 5: Cross-field validation rules (6 tests)
+- Cycle 6: Performance optimization and integration (10 tests)
 
 **Success Criteria**:
-- ✅ 25+ tests with 100% coverage
-- ✅ All validation rules implemented
+- ✅ 20-25 tests with 100% coverage (optimized from 36+)
+- ✅ All business rules implemented (no Pydantic duplication)
 - ✅ Performance: <1ms per validation
 - ✅ Clear error messages for each violation type
+- ✅ Zero redundant validation overhead
 
 ---
 
@@ -184,47 +196,71 @@ Phase 1 focuses on implementing the **ExecutionPlan validation framework** that 
 
 ---
 
-### Story 1.3: Basic Constraint Rules Foundation
+### Story 1.3: Runtime Constraint Monitoring
 
 **Priority**: [P1]
 **Estimated Effort**: 3 person-days
 **Status**: [Backlog]
 
-**Objective**: Implement basic constraint checking as foundation for Phase 4.
+**Objective**: Implement runtime constraint monitoring to enforce ExecutionPlan limits during actual tool execution.
+
+**⚠️ Key Distinction**:
+- **Story 1.1 (PlanValidator)**: Validates the ExecutionPlan itself before execution (static validation)
+- **Story 1.3 (RuntimeConstraintMonitor)**: Monitors actual execution against plan limits (dynamic monitoring)
 
 **Deliverables**:
-- `src/evolvai/core/constraint_checker.py` - ConstraintChecker class
-- `src/evolvai/core/constraints/` - Constraint rule implementations
-- `test/evolvai/core/test_constraint_checker.py` - Test suite
+- `src/evolvai/core/runtime_constraints.py` - RuntimeConstraintMonitor class
+- `src/evolvai/core/constraint_exceptions.py` - Constraint violation exceptions
+- `test/evolvai/core/test_runtime_constraints.py` - Test suite
 
-**Basic Constraints**:
-1. **Resource Limits**:
-   - File count limit enforcement
-   - Change count limit enforcement
-   - Timeout enforcement (preparation)
+**Runtime Constraints** (Monitored During Execution):
 
-2. **Scope Restrictions**:
-   - Directory scope validation
-   - File pattern restrictions
-   - Excluded path checking
+1. **File Count Monitoring**:
+   - Track actual files processed during execution
+   - Raise FileLimitExceededError when limit breached
+   - Record violation in audit log
 
-3. **Operation Safety**:
-   - Destructive operation detection
-   - Rollback availability verification
-   - Dry-run mode requirements
+2. **Change Count Monitoring**:
+   - Track actual changes made during execution
+   - Raise ChangeLimitExceededError when limit breached
+   - Allow graceful rollback
+
+3. **Timeout Monitoring**:
+   - Track elapsed execution time
+   - Raise TimeoutError when limit breached
+   - Ensure clean process termination
+
+**Integration with ToolExecutionEngine**:
+```python
+# In ToolExecutionEngine.execute()
+monitor = RuntimeConstraintMonitor(ctx.execution_plan)
+
+# During EXECUTION phase
+monitor.check_files_processed(ctx.files_count)
+monitor.check_changes_made(ctx.changes_count)
+monitor.check_elapsed_time(ctx.elapsed_time)
+
+# Violations recorded in audit log
+if monitor.has_violations():
+    ctx.constraint_violations.extend(monitor.get_violations())
+```
 
 **Constraint Rule Interface**:
 ```python
 class ConstraintRule(ABC):
     @abstractmethod
     def check(self, plan: ExecutionPlan, context: ExecutionContext) -> ConstraintResult:
-        """Check if constraint is satisfied."""
+        """Check if runtime constraint is satisfied."""
         pass
 
 class FileCountLimitRule(ConstraintRule):
     def check(self, plan: ExecutionPlan, context: ExecutionContext) -> ConstraintResult:
-        # Implementation
-        pass
+        if context.files_processed > plan.limits.max_files:
+            return ConstraintResult(
+                violated=True,
+                message=f"File limit exceeded: {context.files_processed} > {plan.limits.max_files}"
+            )
+        return ConstraintResult(violated=False)
 ```
 
 **TDD Cycles**:
@@ -232,25 +268,33 @@ class FileCountLimitRule(ConstraintRule):
 - Cycle 2: FileCountLimitRule implementation
 - Cycle 3: ChangeCountLimitRule implementation
 - Cycle 4: TimeoutRule implementation
-- Cycle 5: ConstraintChecker orchestration
-- Cycle 6: Integration with PlanValidator
+- Cycle 5: RuntimeConstraintMonitor orchestration
+- Cycle 6: Integration with ToolExecutionEngine
 
 **Success Criteria**:
-- ✅ 3 basic constraint rules implemented
+- ✅ 3 runtime constraint rules implemented
 - ✅ Clean constraint rule interface
-- ✅ Foundation ready for Phase 4 expansion
+- ✅ Graceful handling of violations (rollback support)
+- ✅ Violations recorded in audit log
 - ✅ 100% test coverage
-- ✅ Performance: <2ms for all basic checks
+- ✅ Performance: <2ms for all runtime checks
+- ✅ Foundation for Phase 2 safe operations
+
+**Why Separate from Story 1.1?**:
+- Different validation timing: Static (plan) vs Dynamic (runtime)
+- Different data source: ExecutionPlan vs ExecutionContext
+- Different failure handling: Reject plan vs Stop execution
+- Different testing approach: Unit tests vs Integration tests
 
 ---
 
 ## Timeline and Dependencies
 
 ### Estimated Timeline
-- **Story 1.1**: 4 person-days (TDD: 2 days test + 2 days implementation)
+- **Story 1.1**: 3 person-days (TDD: 1.5 days test + 1.5 days implementation)
 - **Story 1.2**: 3 person-days (TDD: 1.5 days test + 1.5 days implementation)
 - **Story 1.3**: 3 person-days (TDD: 1.5 days test + 1.5 days implementation)
-- **Total**: 10 person-days (~2 weeks)
+- **Total**: 9 person-days (~2 weeks)
 
 ### Dependencies
 ```
@@ -424,4 +468,3 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 **Document Status**: [DRAFT] - Awaiting review and approval
 **Last Updated**: 2025-10-28
 **Next Review**: Before Story 1.1 kickoff
-

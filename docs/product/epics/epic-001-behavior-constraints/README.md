@@ -94,13 +94,13 @@
 - **Story ID**: STORY-1.1
 - **描述**: 实现 ExecutionPlan 合理性验证器，检查约束一致性
 - **优先级**: [P0]
-- **估算**: 4人天
+- **估算**: 3人天 (优化后，从4人天减少)
 - **状态**: [Backlog]
 - **📄 TDD 计划**: [Story 1.1 TDD Plan](../../../development/sprints/current/story-1.1-tdd-plan.md)
 - **交付物**:
   - ValidationResult 数据类 (验证结果封装)
-  - PlanValidator 类 (验证逻辑)
-  - 36+ 测试 (100% 覆盖率)
+  - PlanValidator 类 (业务规则验证，不重复Pydantic边界检查)
+  - 20-25 测试 (优化后，100% 覆盖率)
   - 性能 <1ms
 
 #### Story 1.2: ToolExecutionEngine 集成
@@ -127,7 +127,7 @@
   - 清晰的约束规则接口
   - 为 Phase 4 Constitutional Constraints 做准备
 
-**Phase 1 总工作量**: 10人天 (~2周)
+**Phase 1 总工作量**: 9人天 (~2周) (优化后，从10人天减少)
 
 ---
 
