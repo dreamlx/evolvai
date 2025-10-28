@@ -445,3 +445,55 @@ class TestBackwardCompatibility:
             apply_fn.assert_called_once()
             # Verify result returned
             assert result == "test_result"
+
+    def test_constraint_violation_error_message_clear(self):
+        """Test that ConstraintViolationError has clear user-facing message."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create an invalid execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(pre_conditions=["", ""]),  # Multiple invalid
+        )
+
+        # Create execution engine with constraints enabled
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Mock PlanValidator to return specific violations
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            mock_validator_instance = MockValidator.return_value
+            violation1 = ValidationViolation(
+                field="validation.pre_conditions[0]",
+                message="Empty string not allowed",
+                severity=ViolationSeverity.ERROR,
+            )
+            violation2 = ValidationViolation(
+                field="validation.pre_conditions[1]",
+                message="Empty string not allowed",
+                severity=ViolationSeverity.ERROR,
+            )
+            mock_validator_instance.validate.return_value = ValidationResult(is_valid=False, violations=[violation1, violation2])
+
+            # Execute and catch exception
+            try:
+                engine.execute(tool, execution_plan=plan)
+                assert False, "Should have raised ConstraintViolationError"
+            except ConstraintViolationError as e:
+                # Verify error message is clear and user-friendly
+                error_msg = str(e)
+                # Should mention number of errors
+                assert "2 errors" in error_msg or "2 error" in error_msg
+                # Should include violation details
+                assert "Empty string" in error_msg
+                # Should indicate validation failed
+                assert "Validation failed" in error_msg
