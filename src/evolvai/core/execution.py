@@ -28,7 +28,7 @@ class ExecutionPhase(Enum):
 
 @dataclass
 class ExecutionContext:
-    """Complete execution context with audit trail."""
+    """Execution context for tool execution tracking."""
 
     # Tool information
     tool_name: str
@@ -41,7 +41,7 @@ class ExecutionContext:
     phase: ExecutionPhase = ExecutionPhase.PRE_VALIDATION
 
     # Constraint tracking (Epic-001)
-    constraint_violations: list[str] | None = None
+    constraint_violations: list[dict[str, Any]] | None = None
     should_batch: bool = False
 
     # Execution results
@@ -123,7 +123,10 @@ class ToolExecutionEngine:
 
             return ctx.result
 
-        except ConstraintViolationError:
+        except ConstraintViolationError as e:
+            # Record error and violations in context before re-raising
+            ctx.error = e
+            # Violations are already in ctx.constraint_violations from _pre_execution_with_constraints
             # Re-raise constraint violations for special handling by caller
             raise
         except Exception as e:
@@ -192,7 +195,14 @@ class ToolExecutionEngine:
 
         # If validation failed, raise error
         if not result.is_valid:
-            ctx.constraint_violations = result.violations
+            ctx.constraint_violations = [
+                {
+                    "field": violation.field,
+                    "message": violation.message,
+                    "severity": violation.severity.value,
+                }
+                for violation in result.violations
+            ]
             raise ConstraintViolationError(result)
 
     def _execute_tool(self, tool: "Tool", ctx: ExecutionContext) -> str:

@@ -272,3 +272,108 @@ class TestToolExecutionEngineValidation:
 
             # Verify tool was NOT executed
             apply_fn.assert_not_called()
+
+    def test_constraint_violations_recorded_in_audit_log(self):
+        """Test that constraint violations are recorded in audit log with details."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create an invalid execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(
+                pre_conditions=[""],  # Empty string invalid
+                expected_outcomes=["file created"],
+            ),
+        )
+
+        # Create execution engine with constraints enabled
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Mock PlanValidator to return invalid result with specific violations
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            mock_validator_instance = MockValidator.return_value
+            violation1 = ValidationViolation(
+                field="validation.pre_conditions",
+                message="Empty strings not allowed",
+                severity=ViolationSeverity.ERROR,
+            )
+            violation2 = ValidationViolation(
+                field="validation.expected_outcomes",
+                message="Missing timestamp",
+                severity=ViolationSeverity.WARNING,
+            )
+            mock_validator_instance.validate.return_value = ValidationResult(is_valid=False, violations=[violation1, violation2])
+
+            # Execute with invalid plan (will raise exception)
+            try:
+                engine.execute(tool, execution_plan=plan)
+            except ConstraintViolationError:
+                pass  # Expected
+
+            # Verify audit log contains the violations
+            audit_log = engine.get_audit_log()
+            assert len(audit_log) == 1
+            assert audit_log[0]["tool"] == "test_tool"
+            assert audit_log[0]["success"] is False
+            # Verify violations are recorded
+            assert len(audit_log[0]["constraints"]) == 2
+            assert audit_log[0]["constraints"][0]["field"] == "validation.pre_conditions"
+            assert audit_log[0]["constraints"][0]["severity"] == "error"
+            assert audit_log[0]["constraints"][1]["field"] == "validation.expected_outcomes"
+            assert audit_log[0]["constraints"][1]["severity"] == "warning"
+
+    def test_failed_validation_marked_as_failure(self):
+        """Test that failed validation execution is marked as success=False in audit log."""
+        # Create a mock agent
+        mock_agent = Mock()
+        mock_agent._active_project = Mock()
+        mock_agent.is_using_language_server = Mock(return_value=False)
+
+        # Create a simple tool
+        tool = Mock()
+        tool.get_name = Mock(return_value="test_tool")
+        tool.is_active = Mock(return_value=True)
+        apply_fn = Mock(return_value="test_result")
+        tool.get_apply_fn = Mock(return_value=apply_fn)
+
+        # Create an invalid execution plan
+        plan = ExecutionPlan(
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT),
+            validation=ValidationConfig(pre_conditions=[""]),
+        )
+
+        # Create execution engine with constraints enabled
+        engine = ToolExecutionEngine(agent=mock_agent, enable_constraints=True)
+
+        # Mock PlanValidator to return invalid result
+        with patch("evolvai.core.execution.PlanValidator") as MockValidator:
+            mock_validator_instance = MockValidator.return_value
+            violation = ValidationViolation(
+                field="validation.pre_conditions",
+                message="Empty string",
+                severity=ViolationSeverity.ERROR,
+            )
+            mock_validator_instance.validate.return_value = ValidationResult(is_valid=False, violations=[violation])
+
+            # Execute with invalid plan
+            try:
+                engine.execute(tool, execution_plan=plan)
+            except ConstraintViolationError:
+                pass  # Expected
+
+            # Verify audit log marks this as failure
+            audit_log = engine.get_audit_log()
+            assert len(audit_log) == 1
+            assert audit_log[0]["success"] is False
+            # Verify violation is recorded
+            assert len(audit_log[0]["constraints"]) == 1
