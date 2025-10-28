@@ -6,22 +6,20 @@ EvolvAI Smart Indexing System
 """
 
 import hashlib
-import sqlite3
-import threading
-import time
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Any
-from dataclasses import dataclass, asdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import json
 import os
+import sqlite3
 import subprocess
-from datetime import datetime
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Optional
 
 
 @dataclass
 class FileIndex:
     """文件索引信息"""
+
     path: str
     hash: str
     size: int
@@ -34,6 +32,7 @@ class FileIndex:
 @dataclass
 class SymbolIndex:
     """符号索引信息"""
+
     name: str
     file_path: str
     line: int
@@ -46,6 +45,7 @@ class SymbolIndex:
 @dataclass
 class CacheEntry:
     """缓存条目"""
+
     key: str
     content: str
     hash: str
@@ -68,9 +68,9 @@ class SmartIndexingSystem:
         self._init_database()
 
         # 内存缓存
-        self._file_cache: Dict[str, FileIndex] = {}
-        self._symbol_cache: Dict[str, List[SymbolIndex]] = {}
-        self._content_cache: Dict[str, CacheEntry] = {}
+        self._file_cache: dict[str, FileIndex] = {}
+        self._symbol_cache: dict[str, list[SymbolIndex]] = {}
+        self._content_cache: dict[str, CacheEntry] = {}
 
         # 配置
         self.max_cache_size = 1000
@@ -79,10 +79,10 @@ class SmartIndexingSystem:
 
         # 性能统计
         self.stats = {
-            'cache_hits': 0,
-            'cache_misses': 0,
-            'index_time': 0.0,
-            'search_time': 0.0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "index_time": 0.0,
+            "search_time": 0.0,
         }
 
         # 文件监听器
@@ -92,7 +92,8 @@ class SmartIndexingSystem:
     def _init_database(self):
         """初始化 SQLite 数据库"""
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS files (
                     path TEXT PRIMARY KEY,
                     hash TEXT NOT NULL,
@@ -103,9 +104,11 @@ class SmartIndexingSystem:
                     is_ignored BOOLEAN,
                     indexed_at REAL DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            """
+            )
 
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS symbols (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
@@ -117,24 +120,31 @@ class SmartIndexingSystem:
                     confidence REAL DEFAULT 1.0,
                     indexed_at REAL DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
+            """
+            )
 
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_symbols_name ON symbols(name)
-            ''')
+            """
+            )
 
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_symbols_file ON symbols(file_path)
-            ''')
+            """
+            )
 
-            conn.execute('''
+            conn.execute(
+                """
                 CREATE INDEX IF NOT EXISTS idx_symbols_type ON symbols(symbol_type)
-            ''')
+            """
+            )
 
     def _get_file_hash(self, file_path: Path) -> str:
         """获取文件内容的哈希值"""
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 return hashlib.sha256(f.read()).hexdigest()
         except (OSError, PermissionError):
             return ""
@@ -143,32 +153,32 @@ class SmartIndexingSystem:
         """检测文件语言"""
         ext = file_path.suffix.lower()
         language_map = {
-            '.py': 'python',
-            '.js': 'javascript',
-            '.ts': 'typescript',
-            '.jsx': 'javascript',
-            '.tsx': 'typescript',
-            '.go': 'go',
-            '.rs': 'rust',
-            '.java': 'java',
-            '.kt': 'kotlin',
-            '.cs': 'csharp',
-            '.cpp': 'cpp',
-            '.c': 'c',
-            '.h': 'c',
-            '.hpp': 'cpp',
-            '.sh': 'bash',
-            '.bash': 'bash',
-            '.zsh': 'bash',
+            ".py": "python",
+            ".js": "javascript",
+            ".ts": "typescript",
+            ".jsx": "javascript",
+            ".tsx": "typescript",
+            ".go": "go",
+            ".rs": "rust",
+            ".java": "java",
+            ".kt": "kotlin",
+            ".cs": "csharp",
+            ".cpp": "cpp",
+            ".c": "c",
+            ".h": "c",
+            ".hpp": "cpp",
+            ".sh": "bash",
+            ".bash": "bash",
+            ".zsh": "bash",
         }
         return language_map.get(ext)
 
     def _is_binary_file(self, file_path: Path) -> bool:
         """检测是否为二进制文件"""
         try:
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 chunk = f.read(1024)
-                return b'\0' in chunk
+                return b"\0" in chunk
         except (OSError, PermissionError):
             return True
 
@@ -178,24 +188,43 @@ class SmartIndexingSystem:
 
         # 常见忽略目录
         ignore_dirs = {
-            '.git', '.svn', '.hg',
-            'node_modules', '__pycache__', '.pytest_cache',
-            '.venv', 'venv', 'env',
-            'build', 'dist', 'target', 'out',
-            '.idea', '.vscode',
-            'coverage', '.coverage',
+            ".git",
+            ".svn",
+            ".hg",
+            "node_modules",
+            "__pycache__",
+            ".pytest_cache",
+            ".venv",
+            "venv",
+            "env",
+            "build",
+            "dist",
+            "target",
+            "out",
+            ".idea",
+            ".vscode",
+            "coverage",
+            ".coverage",
         }
 
         # 常见忽略文件扩展名
         ignore_extensions = {
-            '.pyc', '.pyo', '.pyd',
-            '.so', '.dll', '.dylib',
-            '.exe', '.app', '.dmg',
-            '.log', '.tmp', '.swp',
+            ".pyc",
+            ".pyo",
+            ".pyd",
+            ".so",
+            ".dll",
+            ".dylib",
+            ".exe",
+            ".app",
+            ".dmg",
+            ".log",
+            ".tmp",
+            ".swp",
         }
 
         # 检查路径
-        parts = path_str.split('/')
+        parts = path_str.split("/")
         for part in parts:
             if part in ignore_dirs:
                 return True
@@ -225,26 +254,22 @@ class SmartIndexingSystem:
                 mtime=stat.st_mtime,
                 language=language,
                 is_binary=is_binary,
-                is_ignored=is_ignored
+                is_ignored=is_ignored,
             )
         except (OSError, PermissionError):
             return None
 
-    def index_directory(self, max_files: Optional[int] = None,
-                        parallel: bool = True) -> Tuple[int, float]:
+    def index_directory(self, max_files: Optional[int] = None, parallel: bool = True) -> tuple[int, float]:
         """索引目录"""
         start_time = time.time()
 
         # 收集文件
-        all_files = list(self.project_root.rglob('*'))
-        source_files = [
-            f for f in all_files
-            if f.is_file() and not self._should_ignore_file(f)
-        ]
+        all_files = list(self.project_root.rglob("*"))
+        source_files = [f for f in all_files if f.is_file() and not self._should_ignore_file(f)]
 
         if max_files:
             # 优先索引热点目录
-            hot_dirs = {'src', 'lib', 'app', 'packages', 'components'}
+            hot_dirs = {"src", "lib", "app", "packages", "components"}
             hot_files = []
             other_files = []
 
@@ -254,7 +279,7 @@ class SmartIndexingSystem:
                 else:
                     other_files.append(f)
 
-            source_files = hot_files + other_files[:max_files - len(hot_files)]
+            source_files = hot_files + other_files[: max_files - len(hot_files)]
 
         # 并行索引
         if parallel and len(source_files) > 10:
@@ -263,20 +288,17 @@ class SmartIndexingSystem:
             indexed_count = self._index_files_sequential(source_files)
 
         index_time = time.time() - start_time
-        self.stats['index_time'] += index_time
+        self.stats["index_time"] += index_time
         self._last_index_time = time.time()
 
         return indexed_count, index_time
 
-    def _index_files_parallel(self, files: List[Path]) -> int:
+    def _index_files_parallel(self, files: list[Path]) -> int:
         """并行索引文件"""
         indexed_count = 0
 
         with ThreadPoolExecutor(max_workers=self.indexing_threads) as executor:
-            future_to_file = {
-                executor.submit(self.index_file, file): file
-                for file in files
-            }
+            future_to_file = {executor.submit(self.index_file, file): file for file in files}
 
             for future in as_completed(future_to_file):
                 try:
@@ -289,7 +311,7 @@ class SmartIndexingSystem:
 
         return indexed_count
 
-    def _index_files_sequential(self, files: List[Path]) -> int:
+    def _index_files_sequential(self, files: list[Path]) -> int:
         """顺序索引文件"""
         indexed_count = 0
 
@@ -311,15 +333,22 @@ class SmartIndexingSystem:
 
         # 保存到数据库
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute('''
+            conn.execute(
+                """
                 INSERT OR REPLACE INTO files
                 (path, hash, size, mtime, language, is_binary, is_ignored)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                file_index.path, file_index.hash, file_index.size,
-                file_index.mtime, file_index.language,
-                file_index.is_binary, file_index.is_ignored
-            ))
+            """,
+                (
+                    file_index.path,
+                    file_index.hash,
+                    file_index.size,
+                    file_index.mtime,
+                    file_index.language,
+                    file_index.is_binary,
+                    file_index.is_ignored,
+                ),
+            )
 
     def get_file_index(self, path: str) -> Optional[FileIndex]:
         """获取文件索引"""
@@ -329,10 +358,13 @@ class SmartIndexingSystem:
 
         # 再查数据库
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute('''
+            cursor = conn.execute(
+                """
                 SELECT path, hash, size, mtime, language, is_binary, is_ignored
                 FROM files WHERE path = ?
-            ''', (path,))
+            """,
+                (path,),
+            )
 
             row = cursor.fetchone()
             if row:
@@ -342,16 +374,16 @@ class SmartIndexingSystem:
 
         return None
 
-    def search_files(self, pattern: str, max_results: int = 100) -> List[FileIndex]:
+    def search_files(self, pattern: str, max_results: int = 100) -> list[FileIndex]:
         """搜索文件"""
         # 使用 ripgrep 进行高效搜索
         try:
-            cmd = ['rg', '--files', '--max-count', str(max_results), pattern, str(self.project_root)]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            cmd = ["rg", "--files", "--max-count", str(max_results), pattern, str(self.project_root)]
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=30)
 
             if result.returncode == 0:
                 files = []
-                for line in result.stdout.strip().split('\n'):
+                for line in result.stdout.strip().split("\n"):
                     if line:
                         rel_path = str(Path(line).relative_to(self.project_root))
                         file_index = self.get_file_index(rel_path)
@@ -364,36 +396,38 @@ class SmartIndexingSystem:
 
         # 降级到数据库搜索
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute('''
+            cursor = conn.execute(
+                """
                 SELECT path, hash, size, mtime, language, is_binary, is_ignored
                 FROM files
                 WHERE path LIKE ? AND is_binary = 0 AND is_ignored = 0
                 LIMIT ?
-            ''', (f'%{pattern}%', max_results))
+            """,
+                (f"%{pattern}%", max_results),
+            )
 
             return [FileIndex(*row) for row in cursor.fetchall()]
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
-        total_requests = self.stats['cache_hits'] + self.stats['cache_misses']
-        hit_rate = (self.stats['cache_hits'] / total_requests * 100
-                   if total_requests > 0 else 0)
+        total_requests = self.stats["cache_hits"] + self.stats["cache_misses"]
+        hit_rate = self.stats["cache_hits"] / total_requests * 100 if total_requests > 0 else 0
 
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute('SELECT COUNT(*) FROM files')
+            cursor = conn.execute("SELECT COUNT(*) FROM files")
             file_count = cursor.fetchone()[0]
 
-            cursor = conn.execute('SELECT COUNT(*) FROM symbols')
+            cursor = conn.execute("SELECT COUNT(*) FROM symbols")
             symbol_count = cursor.fetchone()[0]
 
         return {
-            'cache_hits': self.stats['cache_hits'],
-            'cache_misses': self.stats['cache_misses'],
-            'hit_rate_percent': round(hit_rate, 2),
-            'cached_files': len(self._file_cache),
-            'indexed_files': file_count,
-            'indexed_symbols': symbol_count,
-            'index_time_seconds': round(self.stats['index_time'], 2),
-            'search_time_seconds': round(self.stats['search_time'], 2),
-            'last_index_time': self._last_index_time,
+            "cache_hits": self.stats["cache_hits"],
+            "cache_misses": self.stats["cache_misses"],
+            "hit_rate_percent": round(hit_rate, 2),
+            "cached_files": len(self._file_cache),
+            "indexed_files": file_count,
+            "indexed_symbols": symbol_count,
+            "index_time_seconds": round(self.stats["index_time"], 2),
+            "search_time_seconds": round(self.stats["search_time"], 2),
+            "last_index_time": self._last_index_time,
         }

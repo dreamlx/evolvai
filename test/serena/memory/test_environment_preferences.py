@@ -4,8 +4,6 @@ Tests for EnvironmentPreferenceMemory component.
 Tests environment preference learning, storage, and retrieval functionality.
 """
 
-import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -77,11 +75,9 @@ class TestEnvironmentPreferenceMemory:
     def test_get_optimal_command_for_intent(self, env_memory):
         """Test getting optimal commands for specific intents."""
         # Set up environment preferences
-        env_memory.record_shell_preference("zsh", {
-            "run_test": "uv run poe test",
-            "format": "uv run poe format",
-            "type_check": "uv run poe type-check"
-        })
+        env_memory.record_shell_preference(
+            "zsh", {"run_test": "uv run poe test", "format": "uv run poe format", "type_check": "uv run poe type-check"}
+        )
         env_memory.record_python_environment("uv", {})
 
         # Test command generation
@@ -155,7 +151,7 @@ class TestEnvironmentPreferenceMemory:
         assert env_memory.get_shell_preference() is None
         assert env_memory.get_python_manager() is None
 
-    @patch('os.environ.get')
+    @patch("os.environ.get")
     def test_detect_shell_from_environment(self, mock_environ_get, env_memory):
         """Test shell detection from environment variables."""
         # Test zsh detection

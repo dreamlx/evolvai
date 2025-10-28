@@ -15,10 +15,10 @@ from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
 from serena.tools.advanced_intelligent_tools import (
-    OptimizeAIToolsTool,
     GenerateOptimizedCodeTool,
+    OptimizeAIToolsTool,
+    ResetIntelligentMemoryTool,
     ShowIntelligentMemoryStatusTool,
-    ResetIntelligentMemoryTool
 )
 
 
@@ -40,7 +40,7 @@ def mock_project(temp_project_root):
         read_only=False,
         ignore_all_files_in_gitignore=True,
         initial_prompt="",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return Project(project_root=str(temp_project_root), project_config=project_config)
 
@@ -67,12 +67,14 @@ class TestOptimizeAIToolsTool:
         """Test optimization with uv environment detected."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {})
         env_memory.record_python_environment("uv", {})
 
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
@@ -98,6 +100,7 @@ class TestOptimizeAIToolsTool:
         """Test optimization for test-related operations."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_python_environment("uv", {})
 
@@ -131,6 +134,7 @@ class TestOptimizeAIToolsTool:
         """Test recommendation generation for zsh shell."""
         # Pre-set zsh environment
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {})
 
@@ -146,6 +150,7 @@ class TestOptimizeAIToolsTool:
         """Test recommendation generation for camelCase naming."""
         # Pre-set camelCase coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("javascript", "frontend", "camelCase", {})
 
@@ -170,6 +175,7 @@ class TestGenerateOptimizedCodeTool:
         """Test generating optimized Python function."""
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
@@ -196,6 +202,7 @@ class TestGenerateOptimizedCodeTool:
         """Test generating optimized JavaScript function."""
         # Pre-set camelCase coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("javascript", "frontend", "camelCase", {})
 
@@ -254,12 +261,14 @@ class TestShowIntelligentMemoryStatusTool:
         """Test showing status with stored memory data."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {})
         env_memory.record_python_environment("uv", {})
 
         # Pre-set coding standards
         from serena.memory.coding_standards import CodingStandardsMemory
+
         standards_memory = CodingStandardsMemory(temp_project_root)
         standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
@@ -315,6 +324,7 @@ class TestResetIntelligentMemoryTool:
         """Test successful reset with proper confirmation."""
         # Pre-set some data to verify it gets cleared
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {})
 

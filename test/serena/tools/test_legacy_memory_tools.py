@@ -15,13 +15,7 @@ import pytest
 from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
-from serena.tools.legacy_memory_tools import (
-    WriteMemoryTool,
-    ReadMemoryTool,
-    ListMemoriesTool,
-    DeleteMemoryTool,
-    LegacyMemoryWarning
-)
+from serena.tools.legacy_memory_tools import DeleteMemoryTool, LegacyMemoryWarning, ListMemoriesTool, ReadMemoryTool, WriteMemoryTool
 
 
 @pytest.fixture
@@ -42,7 +36,7 @@ def mock_project(temp_project_root):
         read_only=False,
         ignore_all_files_in_gitignore=True,
         initial_prompt="",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return Project(project_root=str(temp_project_root), project_config=project_config)
 
@@ -252,7 +246,6 @@ class TestLegacyMemoryTools:
 
     def test_legacy_tools_docstrings_contain_deprecation_notice(self, write_tool, read_tool, list_tool, delete_tool):
         """Test that legacy tools have deprecation notices in docstrings."""
-
         # Check WriteMemoryTool
         assert "DEPRECATED" in WriteMemoryTool.__doc__
         assert "deprecated" in WriteMemoryTool.apply.__doc__
@@ -279,7 +272,7 @@ class TestLegacyMemoryTools:
         assert isinstance(delete_tool, Tool)
 
         # Check they have the required apply method
-        assert hasattr(write_tool, 'apply')
-        assert hasattr(read_tool, 'apply')
-        assert hasattr(list_tool, 'apply')
-        assert hasattr(delete_tool, 'apply')
+        assert hasattr(write_tool, "apply")
+        assert hasattr(read_tool, "apply")
+        assert hasattr(list_tool, "apply")
+        assert hasattr(delete_tool, "apply")

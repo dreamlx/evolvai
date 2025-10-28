@@ -6,13 +6,11 @@ Tests unified coordination of all memory components and intelligent optimization
 
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from serena.memory.intelligent_memory import SerenaIntelligentMemory
-from serena.memory.environment_preferences import EnvironmentPreferenceMemory
-from serena.memory.coding_standards import CodingStandardsMemory
 
 
 @pytest.fixture
@@ -42,10 +40,7 @@ class TestSerenaIntelligentMemory:
     def test_get_optimal_configuration(self, intelligent_memory):
         """Test getting optimal configuration for operations."""
         # Set up environment preferences
-        intelligent_memory.env_memory.record_shell_preference("zsh", {
-            "run_test": "uv run poe test",
-            "format": "uv run poe format"
-        })
+        intelligent_memory.env_memory.record_shell_preference("zsh", {"run_test": "uv run poe test", "format": "uv run poe format"})
         intelligent_memory.env_memory.record_python_environment("uv", {"version": "0.5.0"})
 
         # Set up coding standards
@@ -65,12 +60,8 @@ class TestSerenaIntelligentMemory:
     def test_apply_coding_standards(self, intelligent_memory):
         """Test applying coding standards to code."""
         # Set up coding standards
-        intelligent_memory.standards_memory.record_naming_convention(
-            "python", "backend", "snake_case", {}
-        )
-        intelligent_memory.standards_memory.record_style_preferences("python", {
-            "max_line_length": 88
-        })
+        intelligent_memory.standards_memory.record_naming_convention("python", "backend", "snake_case", {})
+        intelligent_memory.standards_memory.record_style_preferences("python", {"max_line_length": 88})
 
         # Apply standards to code
         context = {"language": "python", "file_path": "services/user.py"}
@@ -84,10 +75,7 @@ class TestSerenaIntelligentMemory:
     def test_generate_optimized_command(self, intelligent_memory):
         """Test generating optimized commands based on intent."""
         # Set up environment preferences
-        intelligent_memory.env_memory.record_shell_preference("zsh", {
-            "run_test": "uv run poe test",
-            "format": "uv run poe format"
-        })
+        intelligent_memory.env_memory.record_shell_preference("zsh", {"run_test": "uv run poe test", "format": "uv run poe format"})
         intelligent_memory.env_memory.record_python_environment("uv", {})
 
         # Generate commands
@@ -103,16 +91,8 @@ class TestSerenaIntelligentMemory:
 
     def test_learn_from_interaction(self, intelligent_memory):
         """Test learning from user interactions."""
-        context = {
-            "operation": "run tests",
-            "language": "python",
-            "file_path": "services/user.py"
-        }
-        result = {
-            "success": True,
-            "command_used": "uv run poe test",
-            "execution_time": 2.5
-        }
+        context = {"operation": "run tests", "language": "python", "file_path": "services/user.py"}
+        result = {"success": True, "command_used": "uv run poe test", "execution_time": 2.5}
 
         # Learn from interaction
         intelligent_memory.learn_from_interaction("run tests", context, result)
@@ -125,15 +105,13 @@ class TestSerenaIntelligentMemory:
         # Set up some data
         intelligent_memory.env_memory.record_shell_preference("zsh", {})
         intelligent_memory.env_memory.record_python_environment("uv", {})
-        intelligent_memory.standards_memory.record_naming_convention(
-            "python", "backend", "snake_case", {}
-        )
+        intelligent_memory.standards_memory.record_naming_convention("python", "backend", "snake_case", {})
 
         # Add some learning cache data
         intelligent_memory.learning_cache["test_interaction"] = {
             "timestamp": "2024-01-01T00:00:00Z",
             "operation": "run tests",
-            "success": True
+            "success": True,
         }
 
         summary = intelligent_memory.get_memory_summary()
@@ -149,9 +127,7 @@ class TestSerenaIntelligentMemory:
         """Test clearing all memory components."""
         # Set up data in all components
         intelligent_memory.env_memory.record_shell_preference("zsh", {})
-        intelligent_memory.standards_memory.record_naming_convention(
-            "python", "backend", "snake_case", {}
-        )
+        intelligent_memory.standards_memory.record_naming_convention("python", "backend", "snake_case", {})
         intelligent_memory.learning_cache["test"] = {"data": "value"}
 
         # Clear all memory
@@ -169,19 +145,19 @@ class TestSerenaIntelligentMemory:
             "timestamp": "2024-01-01T00:00:00Z",
             "operation": "run tests",
             "success": True,
-            "command": "uv run poe test"
+            "command": "uv run poe test",
         }
         intelligent_memory.learning_cache["run_tests_2"] = {
             "timestamp": "2024-01-01T01:00:00Z",
             "operation": "run tests",
             "success": False,
-            "command": "pytest"
+            "command": "pytest",
         }
         intelligent_memory.learning_cache["format_code"] = {
             "timestamp": "2024-01-01T02:00:00Z",
             "operation": "format code",
             "success": True,
-            "command": "uv run poe format"
+            "command": "uv run poe format",
         }
 
         # Get cache for specific operation
@@ -197,18 +173,15 @@ class TestSerenaIntelligentMemory:
         """Test pruning old learning cache entries."""
         # Add cache data with different timestamps
         import datetime
-        old_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=10)
-        recent_time = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
 
-        intelligent_memory.learning_cache["old_entry"] = {
-            "timestamp": old_time.isoformat(),
-            "operation": "run tests",
-            "success": True
-        }
+        old_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=10)
+        recent_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(days=1)
+
+        intelligent_memory.learning_cache["old_entry"] = {"timestamp": old_time.isoformat(), "operation": "run tests", "success": True}
         intelligent_memory.learning_cache["recent_entry"] = {
             "timestamp": recent_time.isoformat(),
             "operation": "run tests",
-            "success": True
+            "success": True,
         }
 
         # Prune old entries (default 7 days)
@@ -260,25 +233,22 @@ class TestSerenaIntelligentMemory:
     def test_learn_from_interaction_with_failure(self, intelligent_memory):
         """Test learning from failed interactions."""
         context = {"operation": "run tests", "language": "python"}
-        result = {
-            "success": False,
-            "error": "ImportError: module not found",
-            "command_used": "pytest"
-        }
+        result = {"success": False, "error": "ImportError: module not found", "command_used": "pytest"}
 
         intelligent_memory.learn_from_interaction("run tests", context, result)
 
         # Should still record the interaction for learning
         assert len(intelligent_memory.learning_cache) > 0
-        cache_entry = list(intelligent_memory.learning_cache.values())[0]
+        cache_entry = next(iter(intelligent_memory.learning_cache.values()))
         assert cache_entry["success"] is False
         assert "error" in cache_entry
 
-    @patch('serena.memory.intelligent_memory.datetime')
+    @patch("serena.memory.intelligent_memory.datetime")
     def test_learning_cache_timestamp_format(self, mock_datetime, intelligent_memory):
         """Test that learning cache entries have proper timestamp format."""
         import datetime
-        fixed_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc)
+
+        fixed_time = datetime.datetime(2024, 1, 1, 12, 0, 0, tzinfo=datetime.UTC)
         mock_datetime.datetime.now.return_value = fixed_time
 
         context = {"operation": "test"}
@@ -287,5 +257,5 @@ class TestSerenaIntelligentMemory:
         intelligent_memory.learn_from_interaction("test", context, result)
 
         # Verify timestamp format
-        cache_entry = list(intelligent_memory.learning_cache.values())[0]
+        cache_entry = next(iter(intelligent_memory.learning_cache.values()))
         assert cache_entry["timestamp"] == "2024-01-01T12:00:00+00:00"

@@ -5,7 +5,6 @@ Tests environment detection, optimized command generation, and tool optimization
 """
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -15,11 +14,7 @@ import pytest
 from serena.agent import SerenaAgent
 from serena.config.serena_config import ProjectConfig
 from serena.project import Project
-from serena.tools.intelligent_tools import (
-    DetectEnvironmentTool,
-    GenerateOptimizedCommandTool,
-    ShowEnvironmentPreferencesTool
-)
+from serena.tools.intelligent_tools import DetectEnvironmentTool, GenerateOptimizedCommandTool, ShowEnvironmentPreferencesTool
 
 
 @pytest.fixture
@@ -40,7 +35,7 @@ def mock_project(temp_project_root):
         read_only=False,
         ignore_all_files_in_gitignore=True,
         initial_prompt="",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     return Project(project_root=str(temp_project_root), project_config=project_config)
 
@@ -63,8 +58,8 @@ class TestDetectEnvironmentTool:
         """Create DetectEnvironmentTool instance."""
         return DetectEnvironmentTool(mock_agent)
 
-    @patch('os.environ.get')
-    @patch('shutil.which')
+    @patch("os.environ.get")
+    @patch("shutil.which")
     def test_detect_zsh_environment(self, mock_which, mock_environ_get, detect_tool, temp_project_root):
         """Test detecting zsh environment with uv."""
         # Setup environment
@@ -82,8 +77,8 @@ class TestDetectEnvironmentTool:
         assert result_data["detected"]["python_manager"] == "uv"
         assert result_data["detected"]["container_runtime"] == "docker"
 
-    @patch('os.environ.get')
-    @patch('shutil.which')
+    @patch("os.environ.get")
+    @patch("shutil.which")
     def test_detect_bash_environment(self, mock_which, mock_environ_get, detect_tool, temp_project_root):
         """Test detecting bash environment with poetry."""
         # Setup environment
@@ -100,18 +95,14 @@ class TestDetectEnvironmentTool:
         assert result_data["detected"]["shell"] == "bash"
         assert result_data["detected"]["python_manager"] == "poetry"
 
-    @patch('os.environ.get')
+    @patch("os.environ.get")
     def test_detect_node_environment(self, mock_environ_get, detect_tool, temp_project_root):
         """Test detecting Node.js environment."""
         # Setup environment
         mock_environ_get.return_value = "/bin/zsh"
 
         # Create package.json and yarn.lock
-        package_json = {
-            "name": "test-project",
-            "version": "1.0.0",
-            "dependencies": {"react": "^18.0.0"}
-        }
+        package_json = {"name": "test-project", "version": "1.0.0", "dependencies": {"react": "^18.0.0"}}
         (temp_project_root / "package.json").write_text(json.dumps(package_json))
         (temp_project_root / "yarn.lock").touch()
         (temp_project_root / "vite.config.js").touch()
@@ -122,7 +113,7 @@ class TestDetectEnvironmentTool:
         assert result_data["detected"]["package_manager"] == "yarn"
         assert result_data["detected"]["build_tool"] == "vite"
 
-    @patch('os.environ.get')
+    @patch("os.environ.get")
     def test_detect_unknown_shell(self, mock_environ_get, detect_tool, temp_project_root):
         """Test detecting unknown shell."""
         # Setup environment
@@ -160,6 +151,7 @@ class TestGenerateOptimizedCommandTool:
         """Test generating uv test commands."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {})
         env_memory.record_python_environment("uv", {})
@@ -176,6 +168,7 @@ class TestGenerateOptimizedCommandTool:
         """Test generating poetry test commands."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("bash", {})
         env_memory.record_python_environment("poetry", {})
@@ -191,6 +184,7 @@ class TestGenerateOptimizedCommandTool:
         """Test generating format commands."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_python_environment("uv", {})
 
@@ -204,6 +198,7 @@ class TestGenerateOptimizedCommandTool:
         """Test generating type check commands."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_python_environment("uv", {})
 
@@ -217,6 +212,7 @@ class TestGenerateOptimizedCommandTool:
         """Test generating build commands."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_python_environment("uv", {})
 
@@ -246,6 +242,7 @@ class TestGenerateOptimizedCommandTool:
         """Test case-insensitive intent matching."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_python_environment("uv", {})
 
@@ -279,6 +276,7 @@ class TestShowEnvironmentPreferencesTool:
         """Test showing saved preferences."""
         # Pre-set environment preferences
         from serena.memory.environment_preferences import EnvironmentPreferenceMemory
+
         env_memory = EnvironmentPreferenceMemory(temp_project_root)
         env_memory.record_shell_preference("zsh", {"run_test": "uv run poe test"})
         env_memory.record_python_environment("uv", {"version": "0.5.0"})

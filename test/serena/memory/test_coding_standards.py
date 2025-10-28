@@ -4,7 +4,6 @@ Tests for CodingStandardsMemory component.
 Tests coding standards learning, naming convention detection, and code transformation.
 """
 
-import json
 import tempfile
 from pathlib import Path
 
@@ -40,7 +39,7 @@ class TestCodingStandardsMemory:
         conventions = {
             "function_example": "snake_case_function",
             "variable_test": "snake_case_variable",
-            "class_example": "PascalCaseClass"
+            "class_example": "PascalCaseClass",
         }
         standards_memory.record_naming_convention("python", "backend", "snake_case", conventions)
 
@@ -54,11 +53,7 @@ class TestCodingStandardsMemory:
 
     def test_record_style_preferences(self, standards_memory):
         """Test recording style preferences."""
-        style_prefs = {
-            "max_line_length": 88,
-            "use_black": True,
-            "quote_style": "double"
-        }
+        style_prefs = {"max_line_length": 88, "use_black": True, "quote_style": "double"}
         standards_memory.record_style_preference("python", style_prefs)
 
         retrieved_prefs = standards_memory.get_style_preferences("python")
@@ -66,11 +61,7 @@ class TestCodingStandardsMemory:
 
     def test_record_project_pattern(self, standards_memory):
         """Test recording project patterns."""
-        patterns = {
-            "has_frontend_folder": True,
-            "has_backend_folder": True,
-            "framework": "react"
-        }
+        patterns = {"has_frontend_folder": True, "has_backend_folder": True, "framework": "react"}
         standards_memory.record_project_pattern("detected", patterns)
 
         stored_patterns = standards_memory.get_project_patterns("detected")
@@ -94,9 +85,7 @@ class TestCodingStandardsMemory:
     def test_apply_naming_convention(self, standards_memory):
         """Test applying naming conventions."""
         # Set up naming convention
-        standards_memory.record_naming_convention("python", "backend", "snake_case", {
-            "function_example": "snake_case_function"
-        })
+        standards_memory.record_naming_convention("python", "backend", "snake_case", {"function_example": "snake_case_function"})
 
         # Test snake_case conversion
         result = standards_memory.apply_naming_convention("MyFunctionName", "python", "backend")
@@ -130,20 +119,10 @@ class TestCodingStandardsMemory:
     def test_get_coding_standards_summary(self, standards_memory):
         """Test getting comprehensive coding standards summary."""
         # Set up coding standards
-        standards_memory.record_naming_convention("python", "backend", "snake_case", {
-            "function_example": "snake_case_function"
-        })
-        standards_memory.record_naming_convention("javascript", "frontend", "camelCase", {
-            "function_example": "camelCaseFunction"
-        })
-        standards_memory.record_style_preference("python", {
-            "max_line_length": 88,
-            "use_black": True
-        })
-        standards_memory.record_project_pattern("detected", {
-            "has_frontend_folder": True,
-            "framework": "react"
-        })
+        standards_memory.record_naming_convention("python", "backend", "snake_case", {"function_example": "snake_case_function"})
+        standards_memory.record_naming_convention("javascript", "frontend", "camelCase", {"function_example": "camelCaseFunction"})
+        standards_memory.record_style_preference("python", {"max_line_length": 88, "use_black": True})
+        standards_memory.record_project_pattern("detected", {"has_frontend_folder": True, "framework": "react"})
 
         summary = standards_memory.get_coding_standards_summary()
 
@@ -173,9 +152,7 @@ class TestCodingStandardsMemory:
         """Test that coding standards persist across memory instances."""
         # Create first instance and record standards
         standards_memory1 = CodingStandardsMemory(temp_project_root)
-        standards_memory1.record_naming_convention("python", "backend", "snake_case", {
-            "function_example": "example_function"
-        })
+        standards_memory1.record_naming_convention("python", "backend", "snake_case", {"function_example": "example_function"})
         standards_memory1.record_style_preference("python", {"max_line_length": 88})
 
         # Create second instance and verify standards persisted
