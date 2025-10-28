@@ -7,6 +7,9 @@ from typing import TYPE_CHECKING, Any
 
 from sensai.util import logging
 
+from evolvai.core.exceptions import ConstraintViolationError
+from evolvai.core.plan_validator import PlanValidator
+
 if TYPE_CHECKING:
     from serena.agent import SerenaAgent
     from serena.tools.tools_base import Tool
@@ -25,7 +28,7 @@ class ExecutionPhase(Enum):
 
 @dataclass
 class ExecutionContext:
-    """Complete execution context with audit trail."""
+    """Execution context for tool execution tracking."""
 
     # Tool information
     tool_name: str
@@ -38,7 +41,7 @@ class ExecutionContext:
     phase: ExecutionPhase = ExecutionPhase.PRE_VALIDATION
 
     # Constraint tracking (Epic-001)
-    constraint_violations: list[str] | None = None
+    constraint_violations: list[dict[str, Any]] | None = None
     should_batch: bool = False
 
     # Execution results
@@ -120,6 +123,12 @@ class ToolExecutionEngine:
 
             return ctx.result
 
+        except ConstraintViolationError as e:
+            # Record error and violations in context before re-raising
+            ctx.error = e
+            # Violations are already in ctx.constraint_violations from _pre_execution_with_constraints
+            # Re-raise constraint violations for special handling by caller
+            raise
         except Exception as e:
             ctx.error = e
             log.error(f"Error executing tool {tool.get_name()}: {e}", exc_info=e)
@@ -163,8 +172,38 @@ class ToolExecutionEngine:
                 self._agent.reset_language_server()
 
     def _pre_execution_with_constraints(self, tool: "Tool", ctx: ExecutionContext) -> None:
-        """Phase 2: Pre-execution with constraints (Epic-001)."""
-        # Placeholder for Epic-001 integration
+        """Phase 2: Pre-execution with constraints (Epic-001).
+
+        Validates ExecutionPlan if provided, otherwise skips validation
+        for backward compatibility.
+
+        Args:
+            tool: The tool to execute
+            ctx: Execution context containing execution_plan (if any)
+
+        Raises:
+            ConstraintViolationError: If execution_plan validation fails
+
+        """
+        # Skip validation if no execution_plan provided (backward compatibility)
+        if ctx.execution_plan is None:
+            return
+
+        # Validate execution plan
+        validator = PlanValidator()
+        result = validator.validate(ctx.execution_plan)
+
+        # If validation failed, raise error
+        if not result.is_valid:
+            ctx.constraint_violations = [
+                {
+                    "field": violation.field,
+                    "message": violation.message,
+                    "severity": violation.severity.value,
+                }
+                for violation in result.violations
+            ]
+            raise ConstraintViolationError(result)
 
     def _execute_tool(self, tool: "Tool", ctx: ExecutionContext) -> str:
         """Phase 3: Actual tool execution.
