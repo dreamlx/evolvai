@@ -59,15 +59,34 @@ class ExecutionContext:
     def check_limits(self) -> None:
         """Check runtime constraints against execution plan limits.
 
-        This method will be fully implemented in subsequent tasks.
-        For now, it provides the basic framework.
+        Raises:
+            Exception: When any constraint is violated
+
         """
         # Skip validation if no execution_plan provided (backward compatibility)
         if self.execution_plan is None:
             return
 
-        # Framework for constraint checking
-        # Full implementation will be added in subsequent tasks
+        # Skip validation if no limits defined (graceful handling)
+        if self.execution_plan.limits is None:
+            return
+
+        limits = self.execution_plan.limits
+
+        # Check file count constraint
+        if hasattr(limits, "max_files") and self.files_processed > limits.max_files:
+            raise Exception(f"File limit exceeded: {self.files_processed} > {limits.max_files}")
+
+        # Check change count constraint
+        if hasattr(limits, "max_changes") and self.changes_made > limits.max_changes:
+            raise Exception(f"Change limit exceeded: {self.changes_made} > {limits.max_changes}")
+
+        # Check timeout constraint
+        if hasattr(limits, "timeout_seconds"):
+            current_time = time.time()
+            elapsed_time = current_time - self.start_time
+            if elapsed_time > limits.timeout_seconds:
+                raise Exception(f"Execution timeout: {elapsed_time:.1f}s > {limits.timeout_seconds}s")
 
     def to_audit_record(self) -> dict[str, Any]:
         """Convert to audit record for TPST analysis."""

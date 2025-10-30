@@ -1,5 +1,8 @@
 """Tests for runtime constraint monitoring in ExecutionContext."""
 
+import time
+from unittest.mock import Mock
+
 import pytest
 
 from evolvai.core.execution import ExecutionContext
@@ -90,3 +93,139 @@ class TestExecutionContextRuntimeTracking:
 
         # Runtime tracking fields should be accessible through context
         # (exact audit record format may vary based on implementation)
+
+
+class TestExecutionContextConstraintChecking:
+    """Test ExecutionContext constraint checking capabilities."""
+
+    def test_check_limits_with_file_limit_violation(self):
+        """Test check_limits raises exception when file limit exceeded."""
+        # Create mock execution plan with file limit
+        mock_limits = Mock()
+        mock_limits.max_files = 5
+
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = mock_limits
+
+        # Create context with execution plan
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 10  # Exceeds limit
+
+        # Should raise an exception (specific exception type will be defined in Green phase)
+        with pytest.raises(Exception) as exc_info:
+            ctx.check_limits()
+
+        assert "File limit exceeded" in str(exc_info.value)
+        assert "10 > 5" in str(exc_info.value)
+
+    def test_check_limits_with_change_limit_violation(self):
+        """Test check_limits raises exception when change limit exceeded."""
+        # Create mock execution plan with change limit
+        mock_limits = Mock()
+        mock_limits.max_changes = 3
+        mock_limits.max_files = 100  # High file limit to avoid file violation
+
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = mock_limits
+
+        # Create context with execution plan
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 1  # Within file limit
+        ctx.changes_made = 5  # Exceeds change limit
+
+        # Should raise an exception
+        with pytest.raises(Exception) as exc_info:
+            ctx.check_limits()
+
+        assert "Change limit exceeded" in str(exc_info.value)
+        assert "5 > 3" in str(exc_info.value)
+
+    def test_check_limits_with_timeout_violation(self):
+        """Test check_limits raises exception when timeout exceeded."""
+        # Create mock execution plan with timeout
+        mock_limits = Mock()
+        mock_limits.max_files = 100
+        mock_limits.max_changes = 100
+        mock_limits.timeout_seconds = 2.0
+
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = mock_limits
+
+        # Create context with execution plan and mock time passage
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 1
+        ctx.changes_made = 1
+        ctx.start_time = time.time() - 5.0  # Started 5 seconds ago (exceeds 2s timeout)
+
+        # Should raise an exception
+        with pytest.raises(Exception) as exc_info:
+            ctx.check_limits()
+
+        assert "timeout" in str(exc_info.value).lower()
+
+    def test_check_limits_within_all_limits(self):
+        """Test check_limits does nothing when all constraints within limits."""
+        # Create mock execution plan with reasonable limits
+        mock_limits = Mock()
+        mock_limits.max_files = 10
+        mock_limits.max_changes = 5
+        mock_limits.timeout_seconds = 30.0
+
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = mock_limits
+
+        # Create context within all limits
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 3  # < 10
+        ctx.changes_made = 2  # < 5
+        ctx.start_time = time.time() - 1.0  # 1 second ago ( < 30s timeout)
+
+        # Should not raise any exception
+        try:
+            ctx.check_limits()
+        except Exception as e:
+            pytest.fail(f"check_limits should not raise exception when within limits: {e}")
+
+    def test_check_limits_file_violation_takes_precedence(self):
+        """Test that file limit violation is checked first (takes precedence)."""
+        # Create mock execution plan with low limits
+        mock_limits = Mock()
+        mock_limits.max_files = 1
+        mock_limits.max_changes = 1
+
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = mock_limits
+
+        # Create context exceeding both limits
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 5  # Exceeds file limit
+        ctx.changes_made = 3  # Exceeds change limit
+
+        # Should raise file limit exception first (checked first)
+        with pytest.raises(Exception) as exc_info:
+            ctx.check_limits()
+
+        assert "File limit exceeded" in str(exc_info.value)
+        assert "5 > 1" in str(exc_info.value)
+
+    def test_check_limits_with_no_limits_object(self):
+        """Test check_limits behavior when execution_plan has no limits."""
+        # Create mock execution plan without limits
+        mock_execution_plan = Mock()
+        mock_execution_plan.limits = None
+
+        ctx = ExecutionContext(tool_name="test_tool", kwargs={})
+        ctx.execution_plan = mock_execution_plan
+        ctx.files_processed = 1000
+        ctx.changes_made = 500
+
+        # Should not raise any exception (graceful handling)
+        try:
+            ctx.check_limits()
+        except Exception as e:
+            pytest.fail(f"check_limits should handle missing limits gracefully: {e}")
