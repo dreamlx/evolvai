@@ -44,6 +44,10 @@ class ExecutionContext:
     constraint_violations: list[dict[str, Any]] | None = None
     should_batch: bool = False
 
+    # Runtime tracking (Story 1.3)
+    files_processed: int = 0
+    changes_made: int = 0
+
     # Execution results
     result: str | None = None
     error: Exception | None = None
@@ -51,6 +55,19 @@ class ExecutionContext:
     # Token tracking (TPST core)
     estimated_tokens: int = 0
     actual_tokens: int = 0
+
+    def check_limits(self) -> None:
+        """Check runtime constraints against execution plan limits.
+
+        This method will be fully implemented in subsequent tasks.
+        For now, it provides the basic framework.
+        """
+        # Skip validation if no execution_plan provided (backward compatibility)
+        if self.execution_plan is None:
+            return
+
+        # Framework for constraint checking
+        # Full implementation will be added in subsequent tasks
 
     def to_audit_record(self) -> dict[str, Any]:
         """Convert to audit record for TPST analysis."""
