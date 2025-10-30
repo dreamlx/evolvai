@@ -199,92 +199,90 @@ Phase 1 focuses on implementing the **ExecutionPlan validation framework** that 
 ### Story 1.3: Runtime Constraint Monitoring
 
 **Priority**: [P1]
-**Estimated Effort**: 3 person-days
+**Estimated Effort**: 2.5 person-days (optimized from 3 person-days)
 **Status**: [Backlog]
+**📄 Decision**: [ADR-004: RuntimeConstraintMonitor Optimization](../../../development/architecture/adrs/004-runtime-constraint-monitor-optimization.md)
 
-**Objective**: Implement runtime constraint monitoring to enforce ExecutionPlan limits during actual tool execution.
+**Objective**: Implement integrated runtime constraint monitoring to enforce ExecutionPlan limits during actual tool execution, providing critical infrastructure for Safe Tools and Constitutional Constraints.
 
 **⚠️ Key Distinction**:
 - **Story 1.1 (PlanValidator)**: Validates the ExecutionPlan itself before execution (static validation)
 - **Story 1.3 (RuntimeConstraintMonitor)**: Monitors actual execution against plan limits (dynamic monitoring)
 
+**🎯 Strategic Importance**:
+- **Critical Infrastructure**: Essential for Phase 2 Safe Tools enforcement
+- **Phase 4 Foundation**: Provides runtime environment for Constitutional Constraints  
+- **TPST Core**: Enables early failure to reduce token waste
+
 **Deliverables**:
-- `src/evolvai/core/runtime_constraints.py` - RuntimeConstraintMonitor class
-- `src/evolvai/core/constraint_exceptions.py` - Constraint violation exceptions
+- Enhance `src/evolvai/core/execution.py` -集成运行时跟踪到 ExecutionContext
+- `src/evolvai/core/constraint_exceptions.py` - Runtime constraint violation exceptions
 - `test/evolvai/core/test_runtime_constraints.py` - Test suite
 
-**Runtime Constraints** (Monitored During Execution):
+**Runtime Constraints** (Integrated Monitoring):
 
 1. **File Count Monitoring**:
-   - Track actual files processed during execution
+   - Track actual files processed via ExecutionContext.files_processed
    - Raise FileLimitExceededError when limit breached
-   - Record violation in audit log
+   - Record violation in existing audit log
 
 2. **Change Count Monitoring**:
-   - Track actual changes made during execution
+   - Track actual changes made via ExecutionContext.changes_made  
    - Raise ChangeLimitExceededError when limit breached
-   - Allow graceful rollback
+   - Allow graceful rollback using existing mechanisms
 
 3. **Timeout Monitoring**:
-   - Track elapsed execution time
+   - Track elapsed execution time via ExecutionContext timing
    - Raise TimeoutError when limit breached
    - Ensure clean process termination
 
-**Integration with ToolExecutionEngine**:
+**Optimized Integration with ToolExecutionEngine**:
 ```python
-# In ToolExecutionEngine.execute()
-monitor = RuntimeConstraintMonitor(ctx.execution_plan)
+# In ExecutionContext (enhanced)
+class ExecutionContext:
+    files_processed: int = 0  # NEW: Runtime tracking
+    changes_made: int = 0     # NEW: Runtime tracking
+    
+    def check_limits(self) -> None:
+        """Integrated runtime constraint checking"""
+        if self.execution_plan:
+            limits = self.execution_plan.limits
+            if self.files_processed > limits.max_files:
+                raise FileLimitExceededError(...)
+            if self.changes_made > limits.max_changes:
+                raise ChangeLimitExceededError(...)
 
-# During EXECUTION phase
-monitor.check_files_processed(ctx.files_count)
-monitor.check_changes_made(ctx.changes_count)
-monitor.check_elapsed_time(ctx.elapsed_time)
-
-# Violations recorded in audit log
-if monitor.has_violations():
-    ctx.constraint_violations.extend(monitor.get_violations())
+# In ToolExecutionEngine.execute() - EXECUTION phase
+# Inline constraint checking during tool execution
+ctx.check_limits()  # Integrated calls
 ```
 
-**Constraint Rule Interface**:
-```python
-class ConstraintRule(ABC):
-    @abstractmethod
-    def check(self, plan: ExecutionPlan, context: ExecutionContext) -> ConstraintResult:
-        """Check if runtime constraint is satisfied."""
-        pass
+**Architecture Optimization**:
+- ✅ **Integrated Design**: Leverage existing ToolExecutionEngine architecture
+- ✅ **Reuse Infrastructure**: Built on ExecutionContext and audit log system
+- ✅ **Minimal Overhead**: Inline checking with <2ms performance target
+- ✅ **Extensible**: Foundation for Phase 4 Constitutional Constraints
 
-class FileCountLimitRule(ConstraintRule):
-    def check(self, plan: ExecutionPlan, context: ExecutionContext) -> ConstraintResult:
-        if context.files_processed > plan.limits.max_files:
-            return ConstraintResult(
-                violated=True,
-                message=f"File limit exceeded: {context.files_processed} > {plan.limits.max_files}"
-            )
-        return ConstraintResult(violated=False)
-```
-
-**TDD Cycles**:
-- Cycle 1: ConstraintRule base class and interface
-- Cycle 2: FileCountLimitRule implementation
-- Cycle 3: ChangeCountLimitRule implementation
-- Cycle 4: TimeoutRule implementation
-- Cycle 5: RuntimeConstraintMonitor orchestration
-- Cycle 6: Integration with ToolExecutionEngine
+**TDD Cycles** (Optimized from 6 to 4 cycles):
+- Cycle 1: ExecutionContext runtime tracking fields
+- Cycle 2: FileLimitExceededError implementation  
+- Cycle 3: ChangeCountLimitError implementation
+- Cycle 4: TimeoutError and integration testing
 
 **Success Criteria**:
-- ✅ 3 runtime constraint rules implemented
-- ✅ Clean constraint rule interface
-- ✅ Graceful handling of violations (rollback support)
-- ✅ Violations recorded in audit log
-- ✅ 100% test coverage
+- ✅ 3 runtime constraint rules implemented with integrated design
+- ✅ Clean integration with existing ToolExecutionEngine flow
+- ✅ Graceful handling of violations (reuse existing rollback support)
+- ✅ Violations recorded in existing audit log
+- ✅ 100% test coverage with 4 TDD cycles
 - ✅ Performance: <2ms for all runtime checks
-- ✅ Foundation for Phase 2 safe operations
+- ✅ Foundation ready for Phase 2 Safe Tools and Phase 4 Constitutional Constraints
 
-**Why Separate from Story 1.1?**:
-- Different validation timing: Static (plan) vs Dynamic (runtime)
-- Different data source: ExecutionPlan vs ExecutionContext
-- Different failure handling: Reject plan vs Stop execution
-- Different testing approach: Unit tests vs Integration tests
+**Why Optimization Matters**:
+- **Strategic Efficiency**: Maintains critical infrastructure while reducing complexity
+- **Architecture Alignment**: Leverages existing 4-phase execution flow
+- **Development Velocity**: Reduced from 3 to 2.5 person-days
+- **Maintainability**: Integrated design reduces component boundaries
 
 ---
 
