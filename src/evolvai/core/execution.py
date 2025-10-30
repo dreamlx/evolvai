@@ -178,10 +178,14 @@ class ToolExecutionEngine:
 
             return ctx.result
 
-        except ConstraintViolationError as e:
+        except (ConstraintViolationError, FileLimitExceededError, ChangeLimitExceededError, TimeoutError) as e:
             # Record error and violations in context before re-raising
             ctx.error = e
-            # Violations are already in ctx.constraint_violations from _pre_execution_with_constraints
+            # For runtime constraint violations, record in context
+            if hasattr(e, "to_dict"):
+                if ctx.constraint_violations is None:
+                    ctx.constraint_violations = []
+                ctx.constraint_violations.append(e.to_dict())
             # Re-raise constraint violations for special handling by caller
             raise
         except Exception as e:
