@@ -7,6 +7,11 @@ from typing import TYPE_CHECKING, Any
 
 from sensai.util import logging
 
+from evolvai.core.constraint_exceptions import (
+    ChangeLimitExceededError,
+    FileLimitExceededError,
+    TimeoutError,
+)
 from evolvai.core.exceptions import ConstraintViolationError
 from evolvai.core.plan_validator import PlanValidator
 
@@ -60,7 +65,9 @@ class ExecutionContext:
         """Check runtime constraints against execution plan limits.
 
         Raises:
-            Exception: When any constraint is violated
+            FileLimitExceededError: When file count limit is exceeded
+            ChangeLimitExceededError: When change count limit is exceeded
+            TimeoutError: When execution timeout is exceeded
 
         """
         # Skip validation if no execution_plan provided (backward compatibility)
@@ -75,18 +82,30 @@ class ExecutionContext:
 
         # Check file count constraint
         if hasattr(limits, "max_files") and self.files_processed > limits.max_files:
-            raise Exception(f"File limit exceeded: {self.files_processed} > {limits.max_files}")
+            raise FileLimitExceededError(
+                f"File limit exceeded: {self.files_processed} > {limits.max_files}",
+                files_processed=self.files_processed,
+                max_files=limits.max_files,
+            )
 
         # Check change count constraint
         if hasattr(limits, "max_changes") and self.changes_made > limits.max_changes:
-            raise Exception(f"Change limit exceeded: {self.changes_made} > {limits.max_changes}")
+            raise ChangeLimitExceededError(
+                f"Change limit exceeded: {self.changes_made} > {limits.max_changes}",
+                changes_made=self.changes_made,
+                max_changes=limits.max_changes,
+            )
 
         # Check timeout constraint
         if hasattr(limits, "timeout_seconds"):
             current_time = time.time()
             elapsed_time = current_time - self.start_time
             if elapsed_time > limits.timeout_seconds:
-                raise Exception(f"Execution timeout: {elapsed_time:.1f}s > {limits.timeout_seconds}s")
+                raise TimeoutError(
+                    f"Execution timeout: {elapsed_time:.1f}s > {limits.timeout_seconds}s",
+                    elapsed_time=elapsed_time,
+                    timeout_seconds=limits.timeout_seconds,
+                )
 
     def to_audit_record(self) -> dict[str, Any]:
         """Convert to audit record for TPST analysis."""

@@ -5,6 +5,11 @@ from unittest.mock import Mock
 
 import pytest
 
+from evolvai.core.constraint_exceptions import (
+    ChangeLimitExceededError,
+    FileLimitExceededError,
+    TimeoutError,
+)
 from evolvai.core.execution import ExecutionContext
 
 
@@ -99,7 +104,7 @@ class TestExecutionContextConstraintChecking:
     """Test ExecutionContext constraint checking capabilities."""
 
     def test_check_limits_with_file_limit_violation(self):
-        """Test check_limits raises exception when file limit exceeded."""
+        """Test check_limits raises FileLimitExceededError when file limit exceeded."""
         # Create mock execution plan with file limit
         mock_limits = Mock()
         mock_limits.max_files = 5
@@ -112,15 +117,18 @@ class TestExecutionContextConstraintChecking:
         ctx.execution_plan = mock_execution_plan
         ctx.files_processed = 10  # Exceeds limit
 
-        # Should raise an exception (specific exception type will be defined in Green phase)
-        with pytest.raises(Exception) as exc_info:
+        # Should raise FileLimitExceededError
+        with pytest.raises(FileLimitExceededError) as exc_info:
             ctx.check_limits()
 
         assert "File limit exceeded" in str(exc_info.value)
         assert "10 > 5" in str(exc_info.value)
+        assert exc_info.value.files_processed == 10
+        assert exc_info.value.max_files == 5
+        assert exc_info.value.constraint_type == "file_limit"
 
     def test_check_limits_with_change_limit_violation(self):
-        """Test check_limits raises exception when change limit exceeded."""
+        """Test check_limits raises ChangeLimitExceededError when change limit exceeded."""
         # Create mock execution plan with change limit
         mock_limits = Mock()
         mock_limits.max_changes = 3
@@ -135,15 +143,18 @@ class TestExecutionContextConstraintChecking:
         ctx.files_processed = 1  # Within file limit
         ctx.changes_made = 5  # Exceeds change limit
 
-        # Should raise an exception
-        with pytest.raises(Exception) as exc_info:
+        # Should raise ChangeLimitExceededError
+        with pytest.raises(ChangeLimitExceededError) as exc_info:
             ctx.check_limits()
 
         assert "Change limit exceeded" in str(exc_info.value)
         assert "5 > 3" in str(exc_info.value)
+        assert exc_info.value.changes_made == 5
+        assert exc_info.value.max_changes == 3
+        assert exc_info.value.constraint_type == "change_limit"
 
     def test_check_limits_with_timeout_violation(self):
-        """Test check_limits raises exception when timeout exceeded."""
+        """Test check_limits raises TimeoutError when timeout exceeded."""
         # Create mock execution plan with timeout
         mock_limits = Mock()
         mock_limits.max_files = 100
@@ -160,11 +171,14 @@ class TestExecutionContextConstraintChecking:
         ctx.changes_made = 1
         ctx.start_time = time.time() - 5.0  # Started 5 seconds ago (exceeds 2s timeout)
 
-        # Should raise an exception
-        with pytest.raises(Exception) as exc_info:
+        # Should raise TimeoutError
+        with pytest.raises(TimeoutError) as exc_info:
             ctx.check_limits()
 
         assert "timeout" in str(exc_info.value).lower()
+        assert exc_info.value.constraint_type == "timeout"
+        assert exc_info.value.timeout_seconds == 2.0
+        assert exc_info.value.elapsed_time > 2.0
 
     def test_check_limits_within_all_limits(self):
         """Test check_limits does nothing when all constraints within limits."""
