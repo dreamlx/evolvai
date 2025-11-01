@@ -2,9 +2,20 @@
 区域检测模块
 """
 
-from .data_models import AppliedArea, ProjectArea, QueryRouting
+from .data_models import (
+    AppliedArea,
+    ProjectArea,
+    QueryRouting,
+    EditValidationResult,
+    RollbackResult,
+    EditValidationError,
+    RollbackStrategy
+)
 from .detector import AreaDetector
+from .edit_validator import EditValidator
+from .edit_wrapper import SafeEditWrapper
 from .feedback import ErrorResponse, ExecutionReport, FeedbackSystem, FixSuggestion
+from .rollback_manager import RollbackManager
 from .router import QueryRouter
 from .wrapper import ConstraintViolationError, SafeSearchError, SafeSearchWrapper
 
@@ -12,6 +23,9 @@ __all__ = [
     "AppliedArea",
     "AreaDetector",
     "ConstraintViolationError",
+    "EditValidationError",
+    "EditValidationResult",
+    "EditValidator",
     "ErrorResponse",
     "ExecutionReport",
     "FeedbackSystem",
@@ -19,6 +33,10 @@ __all__ = [
     "ProjectArea",
     "QueryRouter",
     "QueryRouting",
+    "RollbackManager",
+    "RollbackResult",
+    "RollbackStrategy",
+    "SafeEditWrapper",
     "SafeSearchError",
     "SafeSearchWrapper",
 ]

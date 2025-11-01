@@ -28,6 +28,7 @@
 
 ### 🧪 测试团队
 - **测试计划**: [testing/plans/](./testing/plans/)
+- **测试标准**: [testing/standards/](./testing/standards/)
 - **性能基准**: [testing/benchmarks/](./testing/benchmarks/)
 - **测试报告**: [testing/reports/](./testing/reports/)
 
