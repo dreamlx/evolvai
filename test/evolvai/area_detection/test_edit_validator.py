@@ -2,10 +2,8 @@
 测试EditValidator的编辑验证功能
 """
 
-import pytest
-from unittest.mock import Mock, patch
 from evolvai.area_detection.data_models import ProjectArea
-from evolvai.area_detection.edit_validator import EditValidator, EditValidationResult, EditValidationError
+from evolvai.area_detection.edit_validator import EditValidationError, EditValidator
 
 
 class TestEditValidator:
@@ -13,7 +11,6 @@ class TestEditValidator:
 
     def test_edit_syntax_validation_success(self):
         """测试编辑语法验证成功"""
-
         validator = EditValidator()
 
         # 模拟有效的Python代码编辑
@@ -33,7 +30,6 @@ class TestEditValidator:
 
     def test_edit_syntax_validation_failure(self):
         """测试编辑语法验证失败"""
-
         validator = EditValidator()
 
         # 模拟语法错误的编辑
@@ -54,7 +50,6 @@ class TestEditValidator:
 
     def test_edit_area_validation_success(self):
         """测试编辑区域验证成功"""
-
         validator = EditValidator()
 
         # 模拟backend区域的编辑
@@ -79,7 +74,6 @@ class TestEditValidator:
 
     def test_edit_area_validation_cross_area_edit(self):
         """测试跨区域编辑验证"""
-
         validator = EditValidator()
 
         # 模拟试图编辑不属于任何区域的文件
@@ -106,7 +100,6 @@ class TestEditValidator:
 
     def test_edit_size_validation_within_limits(self):
         """测试编辑大小验证在限制内"""
-
         validator = EditValidator()
 
         # 模拟小规模编辑
@@ -127,7 +120,6 @@ class TestEditValidator:
 
     def test_edit_size_validation_exceeds_limits(self):
         """测试编辑大小验证超出限制"""
-
         validator = EditValidator()
 
         # 模拟大规模编辑
@@ -147,7 +139,6 @@ class TestEditValidator:
 
     def test_edit_import_validation_no_new_imports(self):
         """测试编辑导入验证 - 无新导入"""
-
         validator = EditValidator()
 
         original_code = "import os\nimport sys\ndef test(): pass"
@@ -165,7 +156,6 @@ class TestEditValidator:
 
     def test_edit_import_validation_with_new_imports(self):
         """测试编辑导入验证 - 有新导入"""
-
         validator = EditValidator()
 
         original_code = "import os\ndef test(): pass"
@@ -183,7 +173,6 @@ class TestEditValidator:
 
     def test_edit_import_validation_removal_detection(self):
         """测试编辑导入验证 - 检测导入移除"""
-
         validator = EditValidator()
 
         original_code = "import os\nimport sys\ndef test(): pass"
@@ -201,7 +190,6 @@ class TestEditValidator:
 
     def test_comprehensive_edit_validation_all_pass(self):
         """测试综合编辑验证 - 全部通过"""
-
         validator = EditValidator()
 
         areas = [
@@ -235,7 +223,6 @@ class TestEditValidator:
 
     def test_comprehensive_edit_validation_with_warnings(self):
         """测试综合编辑验证 - 有警告但通过"""
-
         validator = EditValidator()
 
         # 空区域列表，会产生跨区域编辑警告
@@ -260,7 +247,6 @@ class TestEditValidator:
 
     def test_comprehensive_edit_validation_failure(self):
         """测试综合编辑验证 - 验证失败"""
-
         validator = EditValidator()
 
         areas = []
@@ -289,7 +275,6 @@ class TestEditValidationError:
 
     def test_edit_validation_error_creation(self):
         """测试EditValidationError创建"""
-
         error = EditValidationError(
             error_type="syntax_error",
             message="Invalid syntax detected",
@@ -306,7 +291,6 @@ class TestEditValidationError:
 
     def test_edit_validation_error_str_representation(self):
         """测试EditValidationError字符串表示"""
-
         error = EditValidationError(
             error_type="size_limit",
             message="Edit exceeds size limits",

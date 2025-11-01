@@ -2,10 +2,11 @@
 测试SafeEditWrapper的安全编辑功能
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from evolvai.area_detection.data_models import ProjectArea, AppliedArea, QueryRouting
-from evolvai.area_detection.wrapper import SafeSearchWrapper, ConstraintViolationError
+
+from evolvai.area_detection.data_models import ProjectArea
 
 
 class TestSafeEditWrapper:
@@ -13,7 +14,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_execution_success(self):
         """测试安全编辑执行成功"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
@@ -47,9 +47,8 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_pre_validation_failure(self):
         """测试编辑前验证失败"""
-
-        from evolvai.area_detection.edit_wrapper import SafeEditWrapper
         from evolvai.area_detection.edit_validator import EditValidationError
+        from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
         mock_project = Mock()
@@ -77,7 +76,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_constraint_violation_handling(self):
         """测试编辑约束违规处理"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
         from evolvai.core.constraint_exceptions import ChangeLimitExceededError
 
@@ -110,9 +108,8 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_post_validation_rollback(self):
         """测试编辑后验证失败触发回滚"""
-
-        from evolvai.area_detection.edit_wrapper import SafeEditWrapper
         from evolvai.area_detection.edit_validator import EditValidationError
+        from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
         mock_project = Mock()
@@ -149,7 +146,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_area_aware_execution(self):
         """测试区域感知编辑执行"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
@@ -192,7 +188,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_mode_validation(self):
         """测试编辑模式验证"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
@@ -236,7 +231,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_batch_operations(self):
         """测试批量编辑操作"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()
@@ -273,9 +267,8 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_execution_plan_integration(self):
         """测试与Story 1.3 ExecutionPlan集成"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
-        from evolvai.core.execution_plan import ExecutionPlan, ExecutionLimits, RollbackStrategy, RollbackStrategyType
+        from evolvai.core.execution_plan import ExecutionLimits, ExecutionPlan, RollbackStrategy, RollbackStrategyType
 
         mock_agent = Mock()
         mock_project = Mock()
@@ -318,7 +311,6 @@ class TestSafeEditWrapper:
 
     def test_safe_edit_mcp_interface(self):
         """测试MCP接口兼容性"""
-
         from evolvai.area_detection.edit_wrapper import SafeEditWrapper
 
         mock_agent = Mock()

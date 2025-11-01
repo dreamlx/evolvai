@@ -2,15 +2,7 @@
 区域检测模块
 """
 
-from .data_models import (
-    AppliedArea,
-    ProjectArea,
-    QueryRouting,
-    EditValidationResult,
-    RollbackResult,
-    EditValidationError,
-    RollbackStrategy
-)
+from .data_models import AppliedArea, EditValidationError, EditValidationResult, ProjectArea, QueryRouting, RollbackResult, RollbackStrategy
 from .detector import AreaDetector
 from .edit_validator import EditValidator
 from .edit_wrapper import SafeEditWrapper

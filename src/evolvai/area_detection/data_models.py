@@ -3,8 +3,8 @@
 """
 
 from dataclasses import dataclass
-from typing import Optional, List
 from enum import Enum
+from typing import Optional
 
 
 @dataclass
@@ -45,6 +45,7 @@ class QueryRouting:
 
 class RollbackStrategy(Enum):
     """回滚策略枚举"""
+
     GIT = "git"
     FILE_BACKUP = "file_backup"
     AUTO = "auto"
@@ -56,14 +57,14 @@ class EditValidationResult:
 
     is_valid: bool
     error_message: Optional[str] = None
-    syntax_errors: List[str] = None
-    warnings: List[str] = None
-    affected_areas: List[str] = None
+    syntax_errors: list[str] = None
+    warnings: list[str] = None
+    affected_areas: list[str] = None
     changes_count: int = 0
     lines_added: int = 0
     lines_removed: int = 0
-    new_imports: List[str] = None
-    removed_imports: List[str] = None
+    new_imports: list[str] = None
+    removed_imports: list[str] = None
 
     def __post_init__(self):
         if self.syntax_errors is None:
@@ -112,4 +113,78 @@ class EditValidationError(Exception):
             parts.append(f"file: {self.file_path}")
         if self.line_number:
             parts.append(f"line: {self.line_number}")
+        return " | ".join(parts)
+
+
+# 执行相关数据模型
+
+class ExecutionRiskLevel(Enum):
+    """执行风险级别"""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+@dataclass
+class ExecutionPrecondition:
+    """执行前置条件"""
+
+    command: str
+    working_directory: str
+    timeout_seconds: int
+    required_permissions: list[str]
+    system_dependencies: list[str]
+    environment_variables: dict[str, str]
+    risk_level: ExecutionRiskLevel = ExecutionRiskLevel.MEDIUM
+
+
+@dataclass
+class ExecutionResult:
+    """执行结果"""
+
+    success: bool
+    exit_code: int
+    stdout: str
+    stderr: str
+    duration_ms: float
+    precondition_passed: bool
+    command: str
+    working_directory: str
+    error_message: Optional[str] = None
+    timeout_occurred: bool = False
+    signal_code: Optional[int] = None
+
+
+@dataclass
+class ProcessInfo:
+    """进程信息"""
+
+    pid: int
+    pgid: int
+    command: str
+    start_time: float
+    is_running: bool
+    children_pids: list[int]
+
+
+class ExecutionValidationError(Exception):
+    """执行验证异常"""
+
+    def __init__(self,
+                 error_type: str,
+                 message: str,
+                 command: Optional[str] = None,
+                 precondition: Optional[ExecutionPrecondition] = None):
+        super().__init__(message)
+        self.error_type = error_type
+        self.message = message
+        self.command = command
+        self.precondition = precondition
+
+    def __str__(self):
+        parts = [f"{self.error_type}: {self.message}"]
+        if self.command:
+            parts.append(f"command: {self.command}")
         return " | ".join(parts)

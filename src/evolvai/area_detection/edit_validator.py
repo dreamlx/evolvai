@@ -6,25 +6,22 @@
 import ast
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set
-from .data_models import (
-    EditValidationResult,
-    EditValidationError,
-    ProjectArea,
-    AppliedArea
-)
+from typing import Optional
+
+from .data_models import AppliedArea, EditValidationError, EditValidationResult, ProjectArea
 
 
 class EditValidator:
     """编辑验证器"""
 
-    def __init__(self, areas: Optional[List[ProjectArea]] = None, applied_areas: Optional[List[AppliedArea]] = None):
+    def __init__(self, areas: Optional[list[ProjectArea]] = None, applied_areas: Optional[list[AppliedArea]] = None):
         """
         初始化编辑验证器
 
         Args:
             areas: 项目区域列表
             applied_areas: 已应用的区域列表
+
         """
         self.areas = areas or []
         self.applied_areas = applied_areas or []
@@ -50,9 +47,10 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        syntax_errors: List[str] = []
-        warnings: List[str] = []
+        syntax_errors: list[str] = []
+        warnings: list[str] = []
 
         try:
             # 根据语言验证语法
@@ -70,7 +68,7 @@ class EditValidator:
                 warnings.append("未检测到代码变更")
 
         except Exception as e:
-            syntax_errors.append(f"语法验证失败: {str(e)}")
+            syntax_errors.append(f"语法验证失败: {e!s}")
 
         is_valid = len(syntax_errors) == 0
         return EditValidationResult(
@@ -83,7 +81,7 @@ class EditValidator:
     def validate_edit_area(
         self,
         file_path: str,
-        areas: Optional[List[ProjectArea]] = None
+        areas: Optional[list[ProjectArea]] = None
     ) -> EditValidationResult:
         """
         验证编辑区域匹配
@@ -94,9 +92,10 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        affected_areas: List[str] = []
-        warnings: List[str] = []
+        affected_areas: list[str] = []
+        warnings: list[str] = []
 
         # 使用传入的areas或初始化时的areas
         areas_to_check = areas or self.areas
@@ -140,8 +139,9 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        warnings: List[str] = []
+        warnings: list[str] = []
         changes_count = 0
         lines_added = 0
         lines_removed = 0
@@ -215,6 +215,7 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
         return self.validate_import_changes(original_code, edited_code, "test.py", language)
 
@@ -224,7 +225,7 @@ class EditValidator:
         edited_code: str,
         file_path: str,
         language: str,
-        areas: Optional[List[ProjectArea]] = None,
+        areas: Optional[list[ProjectArea]] = None,
         max_changes: Optional[int] = None,
         max_lines_added: Optional[int] = None,
         max_lines_removed: Optional[int] = None
@@ -244,6 +245,7 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 综合验证结果
+
         """
         # 1. 语法验证
         syntax_result = self.validate_edit_syntax(original_code, edited_code, file_path, language)
@@ -292,9 +294,10 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        affected_areas: List[str] = []
-        warnings: List[str] = []
+        affected_areas: list[str] = []
+        warnings: list[str] = []
 
         # 检查文件是否在允许的区域
         path_obj = Path(file_path)
@@ -345,8 +348,9 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        warnings: List[str] = []
+        warnings: list[str] = []
         changes_count = 0
         lines_added = 0
         lines_removed = 0
@@ -417,10 +421,11 @@ class EditValidator:
 
         Returns:
             EditValidationResult: 验证结果
+
         """
-        new_imports: List[str] = []
-        removed_imports: List[str] = []
-        warnings: List[str] = []
+        new_imports: list[str] = []
+        removed_imports: list[str] = []
+        warnings: list[str] = []
 
         try:
             # 提取导入语句
@@ -446,7 +451,7 @@ class EditValidator:
                     warnings.append(f"可能删除了未使用的导入: {', '.join(unused_removals)}")
 
         except Exception as e:
-            warnings.append(f"导入验证失败: {str(e)}")
+            warnings.append(f"导入验证失败: {e!s}")
 
         return EditValidationResult(
             is_valid=True,
@@ -455,20 +460,20 @@ class EditValidator:
             warnings=warnings
         )
 
-    def _validate_python_syntax(self, code: str, file_path: str) -> List[str]:
+    def _validate_python_syntax(self, code: str, file_path: str) -> list[str]:
         """验证Python语法"""
-        errors: List[str] = []
+        errors: list[str] = []
         try:
             ast.parse(code)
         except SyntaxError as e:
             errors.append(f"Python syntax error: {e.msg} (line {e.lineno})")
         except Exception as e:
-            errors.append(f"Python validation failed: {str(e)}")
+            errors.append(f"Python validation failed: {e!s}")
         return errors
 
-    def _validate_js_syntax(self, code: str, file_path: str) -> List[str]:
+    def _validate_js_syntax(self, code: str, file_path: str) -> list[str]:
         """验证JavaScript/TypeScript语法"""
-        errors: List[str] = []
+        errors: list[str] = []
         # 简单的语法检查
         # 实际项目中应该使用eslint或typescript编译器
         try:
@@ -478,12 +483,12 @@ class EditValidator:
             if code.count('(') != code.count(')'):
                 errors.append("Mismatched parentheses")
         except Exception as e:
-            errors.append(f"JavaScript validation failed: {str(e)}")
+            errors.append(f"JavaScript validation failed: {e!s}")
         return errors
 
-    def _validate_go_syntax(self, code: str, file_path: str) -> List[str]:
+    def _validate_go_syntax(self, code: str, file_path: str) -> list[str]:
         """验证Go语法"""
-        errors: List[str] = []
+        errors: list[str] = []
         # 简单的Go语法检查
         # 实际项目中应该使用go fmt或go vet
         try:
@@ -491,12 +496,12 @@ class EditValidator:
             if not re.match(r'^\s*package\s+\w+', code):
                 errors.append("Missing or invalid package declaration")
         except Exception as e:
-            errors.append(f"Go validation failed: {str(e)}")
+            errors.append(f"Go validation failed: {e!s}")
         return errors
 
-    def _validate_java_syntax(self, code: str, file_path: str) -> List[str]:
+    def _validate_java_syntax(self, code: str, file_path: str) -> list[str]:
         """验证Java语法"""
-        errors: List[str] = []
+        errors: list[str] = []
         # 简单的Java语法检查
         # 实际项目中应该使用javac
         try:
@@ -504,12 +509,12 @@ class EditValidator:
             if 'class ' in code and not re.search(r'\bclass\s+\w+', code):
                 errors.append("Invalid class declaration")
         except Exception as e:
-            errors.append(f"Java validation failed: {str(e)}")
+            errors.append(f"Java validation failed: {e!s}")
         return errors
 
-    def _extract_imports(self, code: str, language: str) -> Set[str]:
+    def _extract_imports(self, code: str, language: str) -> set[str]:
         """提取导入语句"""
-        imports: Set[str] = set()
+        imports: set[str] = set()
 
         if language.lower() in ['python', 'py']:
             # Python导入
@@ -554,9 +559,9 @@ class EditValidator:
 
         return imports
 
-    def _check_sensitive_imports(self, imports: List[str], language: str) -> List[str]:
+    def _check_sensitive_imports(self, imports: list[str], language: str) -> list[str]:
         """检查敏感导入"""
-        sensitive: List[str] = []
+        sensitive: list[str] = []
 
         if language.lower() in ['python', 'py']:
             sensitive_patterns = [
@@ -581,13 +586,13 @@ class EditValidator:
 
     def _check_unused_import_removals(
         self,
-        removed_imports: List[str],
+        removed_imports: list[str],
         edited_code: str,
         language: str
-    ) -> List[str]:
+    ) -> list[str]:
         """检查可能未使用的导入删除"""
         # 简化实现：检查导入名称是否仍在代码中使用
-        unused: List[str] = []
+        unused: list[str] = []
         for imp in removed_imports:
             # 提取导入的基础名称
             base_name = imp.split('.')[-1]

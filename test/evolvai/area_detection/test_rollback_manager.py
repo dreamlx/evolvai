@@ -2,9 +2,9 @@
 测试RollbackManager的回滚管理功能
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from evolvai.area_detection.rollback_manager import RollbackManager, RollbackStrategy, RollbackResult
+from unittest.mock import patch
+
+from evolvai.area_detection.rollback_manager import RollbackManager, RollbackResult, RollbackStrategy
 
 
 class TestRollbackManager:
@@ -12,7 +12,6 @@ class TestRollbackManager:
 
     def test_git_rollback_success(self):
         """测试Git回滚成功"""
-
         manager = RollbackManager()
 
         with patch('subprocess.run') as mock_subprocess:
@@ -32,7 +31,6 @@ class TestRollbackManager:
 
     def test_git_rollback_failure(self):
         """测试Git回滚失败"""
-
         manager = RollbackManager()
 
         with patch('subprocess.run') as mock_subprocess:
@@ -51,7 +49,6 @@ class TestRollbackManager:
 
     def test_file_backup_rollback_success(self):
         """测试文件备份回滚成功"""
-
         manager = RollbackManager()
 
         with patch('os.path.exists') as mock_exists, \
@@ -73,7 +70,6 @@ class TestRollbackManager:
 
     def test_file_backup_rollback_no_backup_file(self):
         """测试文件备份回滚 - 备份文件不存在"""
-
         manager = RollbackManager()
 
         with patch('os.path.exists') as mock_exists:
@@ -91,7 +87,6 @@ class TestRollbackManager:
 
     def test_create_backup_before_edit(self):
         """测试编辑前创建备份"""
-
         manager = RollbackManager()
 
         with patch('os.path.exists') as mock_exists, \
@@ -111,7 +106,6 @@ class TestRollbackManager:
 
     def test_create_backup_directory_creation(self):
         """测试创建备份时的目录创建"""
-
         manager = RollbackManager()
 
         with patch('os.path.exists') as mock_exists, \
@@ -135,7 +129,6 @@ class TestRollbackManager:
 
     def test_multiple_file_rollback_success(self):
         """测试多文件回滚成功"""
-
         manager = RollbackManager()
 
         files_to_rollback = [
@@ -158,7 +151,6 @@ class TestRollbackManager:
 
     def test_multiple_file_rollback_partial_failure(self):
         """测试多文件回滚部分失败"""
-
         manager = RollbackManager()
 
         files_to_rollback = [
@@ -183,7 +175,6 @@ class TestRollbackManager:
 
     def test_smart_rollback_strategy_selection(self):
         """测试智能回滚策略选择"""
-
         manager = RollbackManager()
 
         # 测试Git仓库环境选择Git策略
@@ -204,7 +195,6 @@ class TestRollbackManager:
 
     def test_smart_rollback_fallback_to_file_backup(self):
         """测试智能回滚回退到文件备份"""
-
         manager = RollbackManager()
 
         with patch.object(manager, '_is_git_repository') as mock_git_check, \
@@ -224,7 +214,6 @@ class TestRollbackManager:
 
     def test_cleanup_old_backups(self):
         """测试清理旧备份文件"""
-
         manager = RollbackManager()
 
         with patch('glob.glob') as mock_glob, \
@@ -252,7 +241,6 @@ class TestRollbackManager:
 
     def test_rollback_history_tracking(self):
         """测试回滚历史跟踪"""
-
         manager = RollbackManager()
 
         # 模拟几次回滚操作
@@ -272,7 +260,6 @@ class TestRollbackManager:
 
     def test_rollback_performance_metrics(self):
         """测试回滚性能指标"""
-
         manager = RollbackManager()
 
         with patch.object(manager, 'file_backup_rollback') as mock_rollback:

@@ -4,23 +4,15 @@
 提供安全的编辑操作接口
 """
 
-import json
 import time
-from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
+from typing import Any, Optional
 
-from .data_models import (
-    ProjectArea,
-    AppliedArea,
-    EditValidationResult,
-    RollbackResult,
-    RollbackStrategy,
-    EditValidationError
-)
-from .edit_validator import EditValidator
-from .rollback_manager import RollbackManager
+from .data_models import AppliedArea, EditValidationError, ProjectArea, RollbackStrategy
 from .detector import AreaDetector
+from .edit_validator import EditValidator
 from .feedback import FeedbackSystem
+from .rollback_manager import RollbackManager
 
 
 class SafeEditWrapper:
@@ -30,7 +22,7 @@ class SafeEditWrapper:
         self,
         agent: Any = None,
         project: Any = None,
-        config: Optional[Dict[str, Any]] = None
+        config: Optional[dict[str, Any]] = None
     ):
         """
         初始化安全编辑包装器
@@ -39,6 +31,7 @@ class SafeEditWrapper:
             agent: 代理实例（用于获取项目信息）
             project: 项目实例
             config: 配置参数
+
         """
         self.agent = agent
         self.project = project
@@ -69,7 +62,7 @@ class SafeEditWrapper:
         language: Optional[str] = None,
         auto_rollback: bool = True,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         安全编辑文件
 
@@ -82,6 +75,7 @@ class SafeEditWrapper:
 
         Returns:
             Dict[str, Any]: 编辑结果
+
         """
         start_time = time.time()
         self.performance_metrics["total_edits"] += 1
@@ -169,7 +163,7 @@ class SafeEditWrapper:
             self.performance_metrics["failed_edits"] += 1
 
         except Exception as e:
-            result["error"] = f"编辑过程中发生未预期错误: {str(e)}"
+            result["error"] = f"编辑过程中发生未预期错误: {e!s}"
             self.performance_metrics["failed_edits"] += 1
 
         finally:
@@ -182,11 +176,11 @@ class SafeEditWrapper:
 
     def safe_edit_batch(
         self,
-        edits: List[Dict[str, Any]],
+        edits: list[dict[str, Any]],
         mode: str = "safe",
         stop_on_error: bool = True,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         批量安全编辑
 
@@ -197,6 +191,7 @@ class SafeEditWrapper:
 
         Returns:
             Dict[str, Any]: 批量编辑结果
+
         """
         start_time = time.time()
         results = []
@@ -229,9 +224,9 @@ class SafeEditWrapper:
     def rollback_edit(
         self,
         file_path: str,
-        backup_info: Optional[Dict[str, Any]] = None,
+        backup_info: Optional[dict[str, Any]] = None,
         strategy: Optional[RollbackStrategy] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         回滚编辑操作
 
@@ -242,6 +237,7 @@ class SafeEditWrapper:
 
         Returns:
             Dict[str, Any]: 回滚结果
+
         """
         if not self._rollback_manager:
             self._rollback_manager = RollbackManager()
@@ -273,12 +269,13 @@ class SafeEditWrapper:
             "duration_ms": rollback_result.duration_ms
         }
 
-    def get_edit_statistics(self) -> Dict[str, Any]:
+    def get_edit_statistics(self) -> dict[str, Any]:
         """
         获取编辑统计信息
 
         Returns:
             Dict[str, Any]: 统计信息
+
         """
         metrics = self.performance_metrics.copy()
 
@@ -308,7 +305,7 @@ class SafeEditWrapper:
         content: str,
         mode: str = "safe",
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         仅验证编辑（不执行实际编辑）
 
@@ -319,6 +316,7 @@ class SafeEditWrapper:
 
         Returns:
             Dict[str, Any]: 验证结果
+
         """
         # 获取项目区域
         areas, applied_areas = self._get_project_areas()
@@ -339,7 +337,7 @@ class SafeEditWrapper:
 
         return validation_results
 
-    def _get_project_areas(self) -> tuple[List[ProjectArea], List[AppliedArea]]:
+    def _get_project_areas(self) -> tuple[list[ProjectArea], list[AppliedArea]]:
         """获取项目区域信息"""
         if self.area_detector:
             # 获取项目区域
@@ -378,7 +376,7 @@ class SafeEditWrapper:
             return extension_map[extension]
 
         # 尝试从内容中检测
-        if "#!/usr/bin/python" in content or "import " in content and " from " in content:
+        if "#!/usr/bin/python" in content or ("import " in content and " from " in content):
             return "python"
         if "package main" in content or "func " in content:
             return "go"
@@ -400,11 +398,11 @@ class SafeEditWrapper:
         except Exception as e:
             raise EditValidationError(
                 error_type="FILE_READ_ERROR",
-                message=f"无法读取文件: {str(e)}",
+                message=f"无法读取文件: {e!s}",
                 file_path=file_path
             )
 
-    def _write_file(self, file_path: str, content: str) -> Dict[str, Any]:
+    def _write_file(self, file_path: str, content: str) -> dict[str, Any]:
         """写入文件"""
         try:
             path_obj = Path(file_path)
@@ -419,7 +417,7 @@ class SafeEditWrapper:
         except Exception as e:
             return {
                 "success": False,
-                "error": f"文件写入失败: {str(e)}"
+                "error": f"文件写入失败: {e!s}"
             }
 
     def _execute_validation_chain(
@@ -429,7 +427,7 @@ class SafeEditWrapper:
         edited_content: str,
         language: str,
         mode: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行完整的验证链"""
         combined_result = {
             "is_valid": True,
@@ -511,7 +509,7 @@ class SafeEditWrapper:
 
         return combined_result
 
-    def _create_rollback_point(self, file_path: str, original_content: str) -> Dict[str, Any]:
+    def _create_rollback_point(self, file_path: str, original_content: str) -> dict[str, Any]:
         """创建回滚点"""
         if not self._rollback_manager:
             self._rollback_manager = RollbackManager()
@@ -527,7 +525,7 @@ class SafeEditWrapper:
             "duration_ms": result.duration_ms
         }
 
-    def _execute_rollback(self, rollback_info: Dict[str, Any]):
+    def _execute_rollback(self, rollback_info: dict[str, Any]):
         """执行回滚操作"""
         if rollback_info["strategy"] == "git":
             if self._rollback_manager:
@@ -539,7 +537,7 @@ class SafeEditWrapper:
                     rollback_info["file_path"]
                 )
 
-    def _send_edit_feedback(self, file_path: str, validation_results: Dict[str, Any], mode: str):
+    def _send_edit_feedback(self, file_path: str, validation_results: dict[str, Any], mode: str):
         """发送编辑反馈"""
         if not self.feedback_system:
             return

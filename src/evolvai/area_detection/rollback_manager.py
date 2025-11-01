@@ -10,11 +10,9 @@ import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from .data_models import (
-    RollbackResult,
-    RollbackStrategy
-)
+from typing import Optional
+
+from .data_models import RollbackResult, RollbackStrategy
 
 
 class RollbackManager:
@@ -26,10 +24,11 @@ class RollbackManager:
 
         Args:
             backup_dir: 备份目录路径，默认使用临时目录
+
         """
         self.backup_dir = backup_dir or self._create_backup_dir()
-        self.rollback_history: List[Dict] = []
-        self.performance_metrics: Dict[str, List[float]] = {}
+        self.rollback_history: list[dict] = []
+        self.performance_metrics: dict[str, list[float]] = {}
 
     def create_file_backup(self, file_path: str) -> RollbackResult:
         """
@@ -40,6 +39,7 @@ class RollbackManager:
 
         Returns:
             RollbackResult: 备份结果
+
         """
         start_time = time.time()
 
@@ -89,7 +89,7 @@ class RollbackManager:
             return RollbackResult(
                 success=False,
                 strategy=RollbackStrategy.FILE_BACKUP,
-                error_message=f"File backup failed: {str(e)}",
+                error_message=f"File backup failed: {e!s}",
                 duration_ms=duration
             )
 
@@ -103,6 +103,7 @@ class RollbackManager:
 
         Returns:
             RollbackResult: 回滚结果
+
         """
         start_time = time.time()
 
@@ -150,7 +151,7 @@ class RollbackManager:
             return RollbackResult(
                 success=False,
                 strategy=RollbackStrategy.FILE_BACKUP,
-                error_message=f"File rollback failed: {str(e)}",
+                error_message=f"File rollback failed: {e!s}",
                 duration_ms=duration
             )
 
@@ -168,13 +169,14 @@ class RollbackManager:
 
         Returns:
             RollbackResult: 回滚结果
+
         """
         return self.rollback_file_backup(backup_path, file_path)
 
     def multiple_file_rollback(
             self,
-            files_to_rollback: List[Dict[str, str]]
-        ) -> List[RollbackResult]:
+            files_to_rollback: list[dict[str, str]]
+        ) -> list[RollbackResult]:
             """
             多文件回滚
     
@@ -183,8 +185,9 @@ class RollbackManager:
     
             Returns:
                 List[RollbackResult]: 回滚结果列表
+
             """
-            results: List[RollbackResult] = []
+            results: list[RollbackResult] = []
     
             for file_info in files_to_rollback:
                 original_path = file_info.get("file")
@@ -219,6 +222,7 @@ class RollbackManager:
 
         Returns:
             str: 备份文件路径
+
         """
         result = self.create_file_backup(file_path)
         if result.success:
@@ -236,6 +240,7 @@ class RollbackManager:
 
         Returns:
             RollbackResult: Git回滚结果
+
         """
         start_time = time.time()
 
@@ -247,7 +252,7 @@ class RollbackManager:
 
             result = subprocess.run(
                 cmd,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
 
@@ -283,7 +288,7 @@ class RollbackManager:
             return RollbackResult(
                 success=False,
                 strategy=RollbackStrategy.GIT,
-                error_message=f"Git rollback failed: {str(e)}",
+                error_message=f"Git rollback failed: {e!s}",
                 duration_ms=duration
             )
 
@@ -297,6 +302,7 @@ class RollbackManager:
 
         Returns:
             RollbackResult: Git revert结果
+
         """
         start_time = time.time()
 
@@ -307,7 +313,7 @@ class RollbackManager:
 
             result = subprocess.run(
                 cmd,
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
 
@@ -334,15 +340,15 @@ class RollbackManager:
             return RollbackResult(
                 success=False,
                 strategy=RollbackStrategy.GIT,
-                error_message=f"Git revert失败: {str(e)}",
+                error_message=f"Git revert失败: {e!s}",
                 duration_ms=duration
             )
 
     def batch_rollback(
         self,
-        operations: List[Tuple[str, str, RollbackStrategy]],
+        operations: list[tuple[str, str, RollbackStrategy]],
         auto_strategy: bool = True
-    ) -> List[RollbackResult]:
+    ) -> list[RollbackResult]:
         """
         批量回滚操作
 
@@ -352,8 +358,9 @@ class RollbackManager:
 
         Returns:
             List[RollbackResult]: 回滚结果列表
+
         """
-        results: List[RollbackResult] = []
+        results: list[RollbackResult] = []
 
         for backup_path_or_hash, original_path, strategy in operations:
             if auto_strategy and strategy == RollbackStrategy.AUTO:
@@ -386,6 +393,7 @@ class RollbackManager:
 
         Returns:
             RollbackResult: 回滚结果
+
         """
         # 尝试Git回滚
         if self._is_git_repo():
@@ -393,7 +401,7 @@ class RollbackManager:
                 # 检查最近的提交
                 result = subprocess.run(
                     ['git', 'log', '-1', '--oneline'],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True
                 )
 
@@ -420,7 +428,7 @@ class RollbackManager:
             error_message="No available rollback strategy found"
         )
 
-    def get_rollback_history(self, limit: Optional[int] = None) -> List[Dict]:
+    def get_rollback_history(self, limit: Optional[int] = None) -> list[dict]:
         """
         获取回滚历史
 
@@ -429,6 +437,7 @@ class RollbackManager:
 
         Returns:
             List[Dict]: 回滚历史记录
+
         """
         history = self.rollback_history
         if limit:
@@ -439,14 +448,15 @@ class RollbackManager:
         """清空回滚历史"""
         self.rollback_history = []
 
-    def get_performance_metrics(self) -> Dict[str, Dict[str, float]]:
+    def get_performance_metrics(self) -> dict[str, dict[str, float]]:
         """
         获取性能指标
 
         Returns:
             Dict[str, Dict[str, float]]: 性能指标统计
+
         """
-        metrics: Dict[str, Dict[str, float]] = {}
+        metrics: dict[str, dict[str, float]] = {}
 
         for operation, times in self.performance_metrics.items():
             if times:
@@ -470,7 +480,7 @@ class RollbackManager:
         try:
             result = subprocess.run(
                 ['git', 'rev-parse', '--is-inside-work-tree'],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             return result.returncode == 0
@@ -490,6 +500,7 @@ class RollbackManager:
 
         Returns:
             RollbackStrategy: 选择的回滚策略
+
         """
         # 如果看起来像Git哈希，使用Git策略
         if len(identifier) >= 7 and all(c in '0123456789abcdef' for c in identifier.lower()):
@@ -512,9 +523,9 @@ class RollbackManager:
             backup_dir: 备份目录路径，默认使用实例的backup_dir
             max_age_days: 最大保留天数
             max_backups: 最大保留文件数量
+
         """
         import glob
-        import os
         
         target_backup_dir = backup_dir or self.backup_dir
         
@@ -550,6 +561,7 @@ class RollbackManager:
 
         Returns:
             int: 备份目录大小（字节）
+
         """
         total_size = 0
         for backup_file in Path(self.backup_dir).glob("**/*"):
