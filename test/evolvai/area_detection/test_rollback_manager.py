@@ -178,15 +178,14 @@ class TestRollbackManager:
         manager = RollbackManager()
 
         # 测试Git仓库环境选择Git策略
-        with patch.object(manager, '_is_git_repository') as mock_git_check, \
+        with patch.object(manager, '_is_git_repo') as mock_git_check, \
              patch.object(manager, 'git_rollback') as mock_git_rollback:
 
             mock_git_check.return_value = True
-            mock_git_rollback.return_value = RollbackResult(success=True)
+            mock_git_rollback.return_value = RollbackResult(success=True, strategy=RollbackStrategy.GIT)
 
             result = manager.smart_rollback(
-                file_path="/test/file.py",
-                strategy=RollbackStrategy.AUTO
+                file_path="/test/file.py"
             )
 
             assert result.success
