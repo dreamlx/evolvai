@@ -23,16 +23,36 @@ class TestSafeEditWrapper:
         wrapper = SafeEditWrapper(mock_agent, mock_project)
 
         # 模拟编辑成功的场景
-        with patch.object(wrapper, '_validate_edit') as mock_validate, \
-             patch.object(wrapper, '_create_backup') as mock_backup, \
-             patch.object(wrapper.agent, 'execution_engine') as mock_engine, \
-             patch.object(wrapper, '_validate_edit_result') as mock_post_validate:
+        with patch.object(wrapper, '_get_project_areas') as mock_areas, \
+             patch.object(wrapper, '_detect_language') as mock_lang, \
+             patch.object(wrapper, '_read_file') as mock_read, \
+             patch.object(wrapper, '_execute_validation_chain') as mock_validate, \
+             patch.object(wrapper, '_create_rollback_point') as mock_backup, \
+             patch.object(wrapper.agent, 'execution_engine') as mock_engine:
+
+            # Mock项目区域检测
+            mock_areas.return_value = ([], [])
+            mock_lang.return_value = "go"
+            mock_read.return_value = "original content"
 
             # 所有验证都通过
-            mock_validate.return_value = Mock(is_valid=True)
-            mock_backup.return_value = "/tmp/test-project/file.py.backup"
-            mock_engine.execute.return_value = "Edit successful"
-            mock_post_validate.return_value = Mock(is_valid=True)
+            mock_validate.return_value = {
+                'is_valid': True,
+                'validation_result': Mock(is_valid=True),
+                'warnings': []
+            }
+
+            # Mock回滚点创建
+            mock_backup.return_value = {
+                'success': True,
+                'backup_path': '/tmp/test-project/file.py.backup'
+            }
+
+            mock_engine.execute.return_value = Mock(
+                success=True,
+                message="Edit successful",
+                modified_files=1
+            )
 
             result = wrapper.safe_edit(
                 file_path="backend/user.go",
@@ -41,9 +61,9 @@ class TestSafeEditWrapper:
             )
 
             assert result["success"]
-            assert "Edit successful" in result["message"]
-            assert "backup_path" in result
-            assert result["backup_path"] == "/tmp/test-project/file.py.backup"
+            assert result["file_path"] == "backend/user.go"
+            assert result["mode"] == "safe"
+            assert result["rollback_info"]["backup_path"] == "/tmp/test-project/file.py.backup"
 
     def test_safe_edit_pre_validation_failure(self):
         """测试编辑前验证失败"""
