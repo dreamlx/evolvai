@@ -67,6 +67,12 @@ class CodingStandardsMemory:
         key = f"{language}_{domain}"
         return config.get(key, {}).get("convention")
 
+    def get_naming_examples(self, language: str, domain: str) -> dict[str, str]:
+        """Get naming examples for a specific language and domain."""
+        config = self._load_config("naming_conventions")
+        key = f"{language}_{domain}"
+        return config.get(key, {}).get("examples", {})
+
     def apply_naming_convention(self, name: str, language: str, domain: str) -> str:
         """Apply naming convention to transform a name."""
         convention = self.get_naming_convention(language, domain)
