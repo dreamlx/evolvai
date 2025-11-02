@@ -278,3 +278,15 @@ When working with documentation:
 6. **Always link** related documents
 
 **Violation Prevention**: If unsure about document placement, read `docs/.structure.md` completely before proceeding.
+
+## Git Workflow
+
+EvolvAI follows standard Git practices with GitFlow workflow:
+- **Remotes**: origin (dreamlx/evolvai) + upstream (oraios/serena)
+- **Branches**: main/develop/feature/hotfix/archive types
+- **Daily workflow**: Feature branches → develop → main
+- **Upstream sync**: Selective cherry-pick from Serena
+
+📖 Full workflow: docs/development/git-workflow.md
+
+## Development Rules (Learned from Experience)
