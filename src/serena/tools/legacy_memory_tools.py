@@ -8,6 +8,12 @@ Migration Guide:
 - Use docs/ folder for project documentation instead of memory storage
 - New intelligent memory system will focus on AI tool optimization
 - See docs/serena-intelligent-memory-redesign.md for details
+
+TODO: 未来讨论内部记忆模块时候需要重构
+- 当前实现作为向后兼容保留，但不再通过MCP暴露
+- Memory应该重构为纯内部API，专注AI助手上下文管理
+- 需要评估与SerenaIntelligentMemory的整合方案
+- 讨论是否保留文件系统存储或改为更高效的内部存储
 """
 
 import json

@@ -9,6 +9,12 @@ DEPRECATION SCHEDULE:
 - Version 0.4.0: Deprecated warnings added
 - Version 0.5.0: Tools will be removed
 - Migration: Use docs/ folder for documentation, new intelligent memory for AI optimization
+
+TODO: 未来讨论内部记忆模块时候需要重构
+- Memory应该作为AI助手内部机制，不暴露为MCP工具
+- 需要重新设计internal memory API，专注于AI上下文和经验积累
+- 考虑与Epic-003 Graph-of-Thought引擎的集成
+- 讨论memory的持久化策略和会话管理机制
 """
 
 import json
