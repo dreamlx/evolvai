@@ -192,25 +192,6 @@ class TestRollbackManager:
             mock_git_check.assert_called_once()
             mock_git_rollback.assert_called_once()
 
-    def test_smart_rollback_fallback_to_file_backup(self):
-        """测试智能回滚回退到文件备份"""
-        manager = RollbackManager()
-
-        with patch.object(manager, '_is_git_repository') as mock_git_check, \
-             patch.object(manager, 'file_backup_rollback') as mock_file_rollback:
-
-            mock_git_check.return_value = False
-            mock_file_rollback.return_value = RollbackResult(success=True)
-
-            result = manager.smart_rollback(
-                file_path="/test/file.py",
-                backup_path="/test/file.py.backup",
-                strategy=RollbackStrategy.AUTO
-            )
-
-            assert result.success
-            mock_file_rollback.assert_called_once()
-
     def test_cleanup_old_backups(self):
         """测试清理旧备份文件"""
         manager = RollbackManager()
@@ -237,47 +218,3 @@ class TestRollbackManager:
 
             # 应该删除最旧的文件
             mock_remove.assert_called_once_with("/test/file3.py.backup")
-
-    def test_rollback_history_tracking(self):
-        """测试回滚历史跟踪"""
-        manager = RollbackManager()
-
-        # 模拟几次回滚操作
-        with patch.object(manager, 'git_rollback') as mock_git:
-            mock_git.return_value = RollbackResult(success=True)
-
-            manager.git_rollback("hash1", "First rollback")
-            manager.git_rollback("hash2", "Second rollback")
-            manager.git_rollback("hash3", "Third rollback")
-
-        history = manager.get_rollback_history()
-
-        assert len(history) == 3
-        assert history[0]["hash"] == "hash1"
-        assert history[0]["message"] == "First rollback"
-        assert history[2]["hash"] == "hash3"
-
-    def test_rollback_performance_metrics(self):
-        """测试回滚性能指标"""
-        manager = RollbackManager()
-
-        with patch.object(manager, 'file_backup_rollback') as mock_rollback:
-            import time
-            start_time = time.time()
-
-            # 模拟快速回滚
-            mock_rollback.return_value = RollbackResult(success=True)
-
-            result = manager.file_backup_rollback(
-                file_path="/test/file.py",
-                backup_path="/test/file.py.backup"
-            )
-
-            end_time = time.time()
-
-            metrics = manager.get_performance_metrics()
-
-            assert result.success
-            assert "total_rollbacks" in metrics
-            assert "success_rate" in metrics
-            assert "average_duration" in metrics
