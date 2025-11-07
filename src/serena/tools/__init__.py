@@ -2,10 +2,10 @@
 from .tools_base import *
 from .file_tools import *
 from .symbol_tools import *
-from .legacy_memory_tools import *  # Backward compatibility for deprecated tools
 
-# Note: memory_tools.py contains deprecated versions with warnings
-# Use legacy_memory_tools for backward compatibility
+# Note: memory_tools.py and legacy_memory_tools.py are deprecated and no longer exposed via MCP
+# Memory is an internal mechanism for AI assistant context, not a user-facing tool
+# Users should use docs/ folder for project documentation
 from .intelligent_tools import *  # New intelligent memory system
 from .coding_standards_tools import *  # Coding standards and conventions
 from .advanced_intelligent_tools import *  # Complete AI optimization system

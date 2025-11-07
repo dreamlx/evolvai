@@ -20,6 +20,10 @@ class OptimizeAIToolsTool(Tool):
     to provide optimal AI tool recommendations and configurations.
     """
 
+    def get_name(self) -> str:
+        """Override default conversion to fix AI naming issue."""
+        return "optimize_ai_tools"
+
     def apply(self, operation: str, context: Optional[dict[str, Any]] = None) -> str:
         """
         Get optimal AI tool configuration for the operation.
