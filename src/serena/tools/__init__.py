@@ -13,3 +13,4 @@ from .cmd_tools import *
 from .config_tools import *
 from .workflow_tools import *
 from .jetbrains_tools import *
+from .patch_editor_tools import *  # safe_edit Patch-First architecture (Story 2.2)

@@ -7,10 +7,10 @@ Feature 2.2: safe_edit Patch-First Architecture - Tests
 import pytest
 
 from evolvai.tools.patch_editor import (
+    ApplyResult,
     PatchEditor,
     PatchNotFoundError,
     ProposalResult,
-    ApplyResult,
 )
 
 
@@ -254,38 +254,255 @@ class TestApplyEdit:
 class TestExecutionPlanIntegration:
     """ExecutionPlan集成测试 - Scenario 7"""
 
-    def test_apply_with_execution_plan_constraints(self, tmp_path):
+    def test_apply_with_max_changes_violation(self, tmp_path):
         """
-        Scenario 7: apply遵守ExecutionPlan约束
+        Scenario 7a: patch修改超过max_changes限制
 
         Story: story-2.2-bdd-scenarios.md Scenario 7
         DoD: F2 - ExecutionPlan集成
 
-        Given ExecutionPlan定义max_changes=50, timeout=30s
-        When patch修改超过50行
+        Given ExecutionPlan定义max_changes=3
+        When patch修改产生4行变化
         Then 抛出ConstraintViolationError
           And 未执行任何修改
         """
-        pytest.skip("Day 4: ExecutionPlan integration")
+        from evolvai.core.execution_plan import (
+            ExecutionLimits,
+            ExecutionPlan,
+            RollbackStrategy,
+            RollbackStrategyType,
+        )
+        from evolvai.tools import ConstraintViolationError
+
+        # Arrange - 准备测试文件
+        test_file = tmp_path / "user.go"
+        original_content = '''package main
+
+func getUserData() string {
+    return "user"
+}
+
+func getUser() {
+    data := getUserData()
+    return data
+}'''
+        test_file.write_text(original_content)
+
+        editor = PatchEditor(project_root=tmp_path)
+
+        # 生成一个会产生很多变化的patch(>5行)
+        proposal = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData"
+        )
+
+        # Act & Assert - 应用时违反max_changes约束
+        # Note: This patch will produce 4 changes (2 deletions + 2 additions)
+        execution_plan = ExecutionPlan(
+            dry_run=False,
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.GIT_REVERT,
+                commands=[]
+            ),
+            limits=ExecutionLimits(
+                max_files=10,
+                max_changes=3,  # 限制为3, 实际变更为4
+                timeout_seconds=30
+            )
+        )
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            editor.apply_edit(patch_id=proposal.patch_id, execution_plan=execution_plan)
+
+        # 验证异常详情
+        assert exc_info.value.constraint_type == "max_changes"
+        assert exc_info.value.limit == 3
+        assert exc_info.value.actual == 4  # 实际变更数
+
+        # 验证文件未被修改
+        assert test_file.read_text() == original_content
+
+    def test_apply_with_max_files_violation(self, tmp_path):
+        """
+        Scenario 7b: patch影响文件数超过max_files限制
+
+        Story: story-2.2-bdd-scenarios.md Scenario 7
+        DoD: F2 - ExecutionPlan集成
+
+        Given ExecutionPlan定义max_files=1
+        When patch影响2个文件
+        Then 抛出ConstraintViolationError
+          And 未执行任何修改
+        """
+        from evolvai.core.execution_plan import (
+            ExecutionLimits,
+            ExecutionPlan,
+            RollbackStrategy,
+            RollbackStrategyType,
+        )
+        from evolvai.tools import ConstraintViolationError
+
+        # Arrange - 准备多个测试文件
+        file1 = tmp_path / "user.go"
+        file2 = tmp_path / "auth.go"
+        file1.write_text('func getUserData() { return "user" }')
+        file2.write_text('user := getUserData()')
+
+        editor = PatchEditor(project_root=tmp_path)
+
+        # 生成影响2个文件的patch
+        proposal = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData"
+        )
+
+        # Act & Assert - 应用时违反max_files约束
+        execution_plan = ExecutionPlan(
+            dry_run=False,
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.GIT_REVERT,
+                commands=[]
+            ),
+            limits=ExecutionLimits(
+                max_files=1,  # 只允许1个文件
+                max_changes=50,
+                timeout_seconds=30
+            )
+        )
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            editor.apply_edit(patch_id=proposal.patch_id, execution_plan=execution_plan)
+
+        # 验证异常详情
+        assert exc_info.value.constraint_type == "max_files"
+        assert exc_info.value.limit == 1
+        assert exc_info.value.actual == 2
+
+    def test_apply_with_execution_plan_success(self, tmp_path):
+        """
+        Scenario 7c: ExecutionPlan约束满足，正常执行
+
+        Story: story-2.2-bdd-scenarios.md Scenario 7
+        DoD: F2 - ExecutionPlan集成
+
+        Given ExecutionPlan定义合理的限制
+        When patch在限制范围内
+        Then 成功应用patch
+          And 返回成功的ApplyResult
+        """
+        from evolvai.core.execution_plan import (
+            ExecutionLimits,
+            ExecutionPlan,
+            RollbackStrategy,
+            RollbackStrategyType,
+        )
+
+        # Arrange
+        test_file = tmp_path / "user.go"
+        original_content = 'func getUserData() { return "user" }'
+        test_file.write_text(original_content)
+
+        editor = PatchEditor(project_root=tmp_path)
+        proposal = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData"
+        )
+
+        # Act - 使用合理的ExecutionPlan
+        execution_plan = ExecutionPlan(
+            dry_run=False,
+            rollback=RollbackStrategy(
+                strategy=RollbackStrategyType.GIT_REVERT,
+                commands=[]
+            ),
+            limits=ExecutionLimits(
+                max_files=10,
+                max_changes=50,
+                timeout_seconds=30
+            )
+        )
+
+        result = editor.apply_edit(patch_id=proposal.patch_id, execution_plan=execution_plan)
+
+        # Assert
+        assert result.success is True
+        assert len(result.modified_files) == 1
+        assert "fetchUserData" in test_file.read_text()
 
 
 class TestMCPIntegration:
     """MCP接口集成测试 - Scenario 8"""
 
-    def test_mcp_propose_edit_integration(self, tmp_path):
+    def test_mcp_propose_edit_tool_registered(self):
         """
-        Scenario 8: AI助手通过MCP调用propose
+        Scenario 8a: propose_edit工具已注册到MCP系统
 
         Story: story-2.2-bdd-scenarios.md Scenario 8
         DoD: F5 - MCP工具暴露
 
-        Given AI助手连接到EvolvAI MCP服务器
-        When 调用MCP工具 "propose_edit"
-        Then 返回JSON格式结果
-          And 包含patch_id, affected_files, unified_diff
-          And 包含statistics统计信息
+        Given EvolvAI MCP服务器启动
+        When 检查已注册的工具列表
+        Then propose_edit工具存在于工具注册表中
+          And 工具元数据包含正确的文档说明
         """
-        pytest.skip("Day 4: MCP integration")
+        from serena.tools import ToolRegistry
+
+        registry = ToolRegistry()
+
+        # DoD F5.1: propose_edit工具已注册
+        assert "propose_edit" in registry.get_tool_names()
+
+        # DoD F5.2: 工具类可以被获取
+        propose_tool_class = registry.get_tool_class_by_name("propose_edit")
+        assert propose_tool_class is not None
+
+        # DoD F5.3: 工具有正确的文档字符串
+        tool_description = propose_tool_class.get_tool_description()
+        assert "Patch-First" in tool_description or "unified diff" in tool_description
+
+        # DoD F5.4: apply方法有正确的文档字符串
+        apply_docstring = propose_tool_class.get_apply_docstring_from_cls()
+        assert "pattern" in apply_docstring.lower()
+        assert "replacement" in apply_docstring.lower()
+        assert "scope" in apply_docstring.lower()
+
+    def test_mcp_apply_edit_tool_registered(self):
+        """
+        Scenario 8b: apply_edit工具已注册到MCP系统
+
+        Story: story-2.2-bdd-scenarios.md Scenario 8
+        DoD: F5 - MCP工具暴露
+
+        Given EvolvAI MCP服务器启动
+        When 检查已注册的工具列表
+        Then apply_edit工具存在于工具注册表中
+          And 工具元数据包含正确的文档说明
+          And 工具标记为可编辑工具
+        """
+        from serena.tools import ToolRegistry
+
+        registry = ToolRegistry()
+
+        # DoD F5.1: apply_edit工具已注册
+        assert "apply_edit" in registry.get_tool_names()
+
+        # DoD F5.2: 工具类可以被获取
+        apply_tool_class = registry.get_tool_class_by_name("apply_edit")
+        assert apply_tool_class is not None
+
+        # DoD F5.3: 工具标记为可编辑
+        assert apply_tool_class.can_edit() is True
+
+        # DoD F5.4: 工具有正确的文档字符串
+        tool_description = apply_tool_class.get_tool_description()
+        assert "ExecutionPlan" in tool_description or "constraints" in tool_description
+
+        # DoD F5.5: apply方法文档包含必需参数说明
+        apply_docstring = apply_tool_class.get_apply_docstring_from_cls()
+        assert "patch_id" in apply_docstring.lower()
+        assert "max_files" in apply_docstring.lower()
+        assert "max_changes" in apply_docstring.lower()
+        assert "timeout" in apply_docstring.lower()
 
 
 @pytest.fixture
