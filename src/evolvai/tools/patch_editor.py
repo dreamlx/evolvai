@@ -15,6 +15,8 @@ from difflib import unified_diff
 from pathlib import Path
 from typing import Any, Optional
 
+from evolvai.core.execution_plan import ExecutionPlan
+
 
 @dataclass
 class ProposalResult:
@@ -118,7 +120,7 @@ class PatchEditor:
             # 执行替换
             new_content = re.sub(pattern, replacement, original_content)
             
-            # 如果内容没有变化，跳过
+            # 如果内容没有变化, 跳过
             if new_content == original_content:
                 continue
             
@@ -186,7 +188,7 @@ class PatchEditor:
     def apply_edit(
         self,
         patch_id: str,
-        execution_plan: Optional[Any] = None,
+        execution_plan: Optional[ExecutionPlan] = None,
         **kwargs
     ) -> ApplyResult:
         """
@@ -204,71 +206,103 @@ class PatchEditor:
             PatchNotFoundError: patch_id不存在
             PatchConflictError: patch冲突
             TimeoutError: 操作超时
+            ConstraintViolationError: ExecutionPlan约束违规
 
         """
         # 1. 验证patch存在
         if patch_id not in self.patch_store:
             raise PatchNotFoundError(f"Patch '{patch_id}' not found")
-        
+
         patch_content = self.patch_store[patch_id]
+
+        # 2. ExecutionPlan约束检查
+        if execution_plan is not None:
+            # 2.1 检查max_files限制
+            num_files = len(patch_content.affected_files)
+            if num_files > execution_plan.limits.max_files:
+                raise ConstraintViolationError(
+                    f"Patch affects {num_files} files, exceeding limit of {execution_plan.limits.max_files}",
+                    constraint_type="max_files",
+                    limit=execution_plan.limits.max_files,
+                    actual=num_files
+                )
+
+            # 2.2 检查max_changes限制
+            total_changes = self._count_changes_in_diff(patch_content.unified_diff)
+            if total_changes > execution_plan.limits.max_changes:
+                raise ConstraintViolationError(
+                    f"Patch contains {total_changes} changes, exceeding limit of {execution_plan.limits.max_changes}",
+                    constraint_type="max_changes",
+                    limit=execution_plan.limits.max_changes,
+                    actual=total_changes
+                )
+
         worktree_path = None
-        
+        start_time = time.time()
+
         try:
-            # 2. 创建临时工作目录（简化版，不使用git worktree）
+            # 3. 创建临时工作目录(简化版, 不使用git worktree)
             worktree_path = tempfile.mkdtemp(prefix="patch_apply_")
             worktree_path_obj = Path(worktree_path)
-            
-            # 3. 在临时目录中重新生成修改后的文件
-            # 从patch中提取pattern和replacement（简化实现）
-            # 实际上我们可以直接应用之前的替换逻辑
+
+            # 4. 在临时目录中重新生成修改后的文件
             modified_files = []
-            
+
             for relative_path in patch_content.affected_files:
+                # 4.1 检查timeout
+                if execution_plan is not None:
+                    elapsed = time.time() - start_time
+                    if elapsed > execution_plan.limits.timeout_seconds:
+                        raise TimeoutError(
+                            f"Operation exceeded timeout of {execution_plan.limits.timeout_seconds} seconds"
+                        )
+
                 src_file = self.project_root / relative_path
                 if not src_file.exists():
                     continue
-                
+
                 # 读取原始文件
                 original_content = src_file.read_text()
-                
+
                 # 从metadata中获取pattern和replacement
                 pattern = patch_content.metadata.get('pattern')
                 replacement = patch_content.metadata.get('replacement')
-                
+
                 if not pattern or replacement is None:
-                    raise ValueError(f"Missing pattern/replacement in patch metadata")
-                
+                    raise ValueError("Missing pattern/replacement in patch metadata")
+
                 # 应用替换
                 new_content = re.sub(pattern, replacement, original_content)
-                
+
                 # 在worktree中创建临时文件
                 temp_file = worktree_path_obj / relative_path
                 temp_file.parent.mkdir(parents=True, exist_ok=True)
                 temp_file.write_text(new_content)
-                
+
                 # 验证变更后复制回主目录
                 shutil.copy2(temp_file, src_file)
                 modified_files.append(relative_path)
-            
-            # 4. 清理临时目录
+
+            # 5. 清理临时目录
             shutil.rmtree(worktree_path)
-            
-            # 5. 返回成功结果
+
+            # 6. 返回成功结果
             return ApplyResult(
                 success=True,
                 modified_files=modified_files,
                 worktree_path=worktree_path,
                 audit_log_id=None
             )
-            
+
         except Exception as e:
             # 发生错误时清理worktree
             if worktree_path and Path(worktree_path).exists():
                 shutil.rmtree(worktree_path)
-            
-            if isinstance(e, (PatchNotFoundError, PatchConflictError, ValueError)):
+
+            if isinstance(e, (PatchNotFoundError, PatchConflictError, ValueError,
+                            ConstraintViolationError, TimeoutError)):
                 raise
-            
+
             return ApplyResult(
                 success=False,
                 modified_files=[],
@@ -280,20 +314,19 @@ class PatchEditor:
         """创建临时Git worktree"""
         # 创建临时目录
         temp_dir = tempfile.mkdtemp(prefix="patch_worktree_")
-        worktree_name = f"worktree_{int(time.time() * 1000)}"
         
         try:
             # 使用git worktree add创建工作树
             result = subprocess.run(
                 ["git", "worktree", "add", temp_dir, "HEAD"],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 text=True,
                 timeout=10
             )
             
             if result.returncode != 0:
-                # 如果git worktree失败，尝试简单复制方式
+                # 如果git worktree失败, 尝试简单复制方式
                 # (用于非Git仓库或测试环境)
                 shutil.rmtree(temp_dir)
                 temp_dir = tempfile.mkdtemp(prefix="patch_simple_")
@@ -326,19 +359,19 @@ class PatchEditor:
                 return
             
             # 尝试使用git worktree remove
-            result = subprocess.run(
+            subprocess.run(
                 ["git", "worktree", "remove", "--force", worktree_path],
-                cwd=self.project_root,
+                check=False, cwd=self.project_root,
                 capture_output=True,
                 timeout=10
             )
             
-            # 无论git worktree remove是否成功，都尝试直接删除目录
+            # 无论git worktree remove是否成功, 都尝试直接删除目录
             if worktree_path_obj.exists():
                 shutil.rmtree(worktree_path)
                 
         except Exception:
-            # 清理失败不影响主流程，静默处理
+            # 清理失败不影响主流程, 静默处理
             pass
 
     def _generate_patch_id(self) -> str:
@@ -348,6 +381,24 @@ class PatchEditor:
         hash_value = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
         return f"patch_{timestamp}_{hash_value}"
 
+    def _count_changes_in_diff(self, unified_diff: str) -> int:
+        """
+        Count total number of changes (additions + deletions) in a unified diff.
+        
+        Args:
+            unified_diff: The unified diff text
+            
+        Returns:
+            Total number of changed lines
+
+        """
+        changes = 0
+        for line in unified_diff.split('\n'):
+            # Count lines starting with + or - (but not +++ or ---)
+            if (line.startswith('+') and not line.startswith('+++')) or (line.startswith('-') and not line.startswith('---')):
+                changes += 1
+        return changes
+
 
 class PatchNotFoundError(Exception):
     """Patch不存在错误"""
@@ -356,3 +407,23 @@ class PatchNotFoundError(Exception):
 
 class PatchConflictError(Exception):
     """Patch冲突错误"""
+
+
+class ConstraintViolationError(Exception):
+    """ExecutionPlan约束违规错误"""
+    
+    def __init__(self, message: str, constraint_type: str, limit: Any, actual: Any):
+        """
+        Initialize ConstraintViolationError.
+        
+        Args:
+            message: Error message
+            constraint_type: Type of constraint violated (e.g., "max_changes", "timeout")
+            limit: The limit that was violated
+            actual: The actual value that exceeded the limit
+
+        """
+        super().__init__(message)
+        self.constraint_type = constraint_type
+        self.limit = limit
+        self.actual = actual
