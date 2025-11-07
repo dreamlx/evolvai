@@ -8,7 +8,9 @@ import pytest
 
 from evolvai.tools.patch_editor import (
     PatchEditor,
+    PatchNotFoundError,
     ProposalResult,
+    ApplyResult,
 )
 
 
@@ -149,7 +151,51 @@ class TestApplyEdit:
           And 清理临时worktree
           And 返回成功的ApplyResult
         """
-        pytest.skip("Day 3: apply_edit implementation")
+        # Arrange - 准备Git仓库和文件
+        import subprocess
+        
+        # 初始化Git仓库
+        subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, check=True, capture_output=True)
+        
+        # 创建并提交原始文件
+        test_file = tmp_path / "user.go"
+        original_content = 'package main\nfunc getUserData() string { return "user" }'
+        test_file.write_text(original_content)
+        subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+        subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=tmp_path, check=True, capture_output=True)
+        
+        # 生成patch
+        editor = PatchEditor(project_root=tmp_path)
+        proposal = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData"
+        )
+        
+        # Act - 应用patch
+        result = editor.apply_edit(patch_id=proposal.patch_id)
+        
+        # Assert - 验证结果
+        # DoD F2.1: 返回ApplyResult
+        assert isinstance(result, ApplyResult)
+        
+        # DoD F2.2: 操作成功
+        assert result.success is True
+        assert result.error_message is None
+        
+        # DoD F2.3: modified_files正确
+        assert len(result.modified_files) == 1
+        assert "user.go" in result.modified_files[0]
+        
+        # DoD F3.1: 文件内容已更新
+        assert "fetchUserData" in test_file.read_text()
+        assert "getUserData" not in test_file.read_text()
+        
+        # DoD F3.2: worktree已清理 (不存在临时目录)
+        if result.worktree_path:
+            from pathlib import Path
+            assert not Path(result.worktree_path).exists()
 
     def test_apply_invalid_patch_id(self, tmp_path):
         """
@@ -165,13 +211,11 @@ class TestApplyEdit:
           And 未创建worktree
           And 未修改任何文件
         """
-        pytest.skip("Day 3: apply_edit implementation")
+        editor = PatchEditor(project_root=tmp_path)
         
-        # Day 3实施时取消上面的skip并使用以下代码:
-        # editor = PatchEditor(project_root=tmp_path)
-        # 
-        # with pytest.raises(PatchNotFoundError, match="Patch 'invalid_patch' not found"):
-        #     editor.apply_edit(patch_id="invalid_patch")
+        # DoD F2.1: 抛出PatchNotFoundError
+        with pytest.raises(PatchNotFoundError, match="Patch 'invalid_patch' not found"):
+            editor.apply_edit(patch_id="invalid_patch")
 
     def test_apply_patch_conflict_rollback(self, tmp_path):
         """
