@@ -168,11 +168,34 @@ Day 2| {X}
 
 ---
 
+## ✅ Sprint完成清单
+
+### 代码和测试
+- [ ] 所有代码已合并到develop分支
+- [ ] 所有测试通过（`uv run poe test`）
+- [ ] 代码格式化和类型检查通过
+
+### 文档归档
+- [ ] **🗂️ 执行5S6A文档整理**（参考：[docs-5s6a-analysis.md](../../development/tasks/docs-5s6a-analysis.md)）
+  - [ ] 检查current/目录，归档已完成Story文档到completed/
+  - [ ] 检查命名规范（story-X.X格式）
+  - [ ] 移动分析文档到knowledge/research/
+  - [ ] 清理临时测试文件
+- [ ] Sprint文档移动到completed/sprint-{编号}/
+
+### Sprint Review和Retrospective
+- [ ] Sprint Review完成
+- [ ] Sprint Retrospective完成
+- [ ] 行动项记录到下一个Sprint
+
+---
+
 ## 📚 相关文档
 
 - [Sprint Planning Notes](./sprint-{编号}-planning.md)
 - [Sprint Review Slides](./sprint-{编号}-review.pdf)
 - [Sprint Retrospective](../../knowledge/lessons-learned/sprint-retrospectives/sprint-{编号}-retro.md)
+- [5S6A文档整理指南](../../development/tasks/docs-5s6a-analysis.md)
 
 ---
 
