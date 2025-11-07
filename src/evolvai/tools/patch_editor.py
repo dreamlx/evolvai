@@ -4,9 +4,11 @@ propose → diff → apply架构
 """
 
 import hashlib
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
+from difflib import unified_diff
 from pathlib import Path
 from typing import Any, Optional
 
@@ -92,7 +94,81 @@ class PatchEditor:
             FileNotFoundError: 找不到匹配文件
 
         """
-        raise NotImplementedError("propose_edit will be implemented in Day 2")
+        # 1. 扫描匹配的文件
+        matched_files = list(self.project_root.glob(scope))
+        matched_files = [f for f in matched_files if f.is_file()]
+        
+        if not matched_files:
+            raise FileNotFoundError(f"No files found matching scope: {scope}")
+        
+        # 2. 对每个文件生成diff
+        affected_files = []
+        all_diffs = []
+        lines_changed = 0
+        
+        for file_path in matched_files:
+            try:
+                original_content = file_path.read_text()
+            except (UnicodeDecodeError, PermissionError):
+                continue  # 跳过二进制文件或无权限文件
+            
+            # 执行替换
+            new_content = re.sub(pattern, replacement, original_content)
+            
+            # 如果内容没有变化，跳过
+            if new_content == original_content:
+                continue
+            
+            # 生成unified diff
+            relative_path = file_path.relative_to(self.project_root)
+            original_lines = original_content.splitlines(keepends=True)
+            new_lines = new_content.splitlines(keepends=True)
+            
+            diff = unified_diff(
+                original_lines,
+                new_lines,
+                fromfile=f"a/{relative_path}",
+                tofile=f"b/{relative_path}",
+                lineterm=""
+            )
+            
+            diff_text = "".join(diff)
+            if diff_text:
+                all_diffs.append(diff_text)
+                affected_files.append(str(relative_path))
+                lines_changed += abs(len(new_lines) - len(original_lines))
+        
+        if not affected_files:
+            raise ValueError("No changes would be made with the given pattern")
+        
+        # 3. 生成patch_id和结果
+        patch_id = self._generate_patch_id()
+        unified_diff_text = "\n".join(all_diffs)
+        
+        statistics = {
+            "files_modified": len(affected_files),
+            "lines_changed": lines_changed,
+            "pattern": pattern,
+            "replacement": replacement
+        }
+        
+        # 4. 保存到patch_store
+        patch_content = PatchContent(
+            patch_id=patch_id,
+            unified_diff=unified_diff_text,
+            affected_files=affected_files,
+            created_at=datetime.now(),
+            metadata={"scope": scope, "language": language}
+        )
+        self.patch_store[patch_id] = patch_content
+        
+        # 5. 返回结果
+        return ProposalResult(
+            patch_id=patch_id,
+            unified_diff=unified_diff_text,
+            affected_files=affected_files,
+            statistics=statistics
+        )
 
     def apply_edit(
         self,
@@ -134,4 +210,3 @@ class PatchNotFoundError(Exception):
 
 class PatchConflictError(Exception):
     """Patch冲突错误"""
-

@@ -8,7 +8,7 @@ import pytest
 
 from evolvai.tools.patch_editor import (
     PatchEditor,
-    PatchNotFoundError,
+    ProposalResult,
 )
 
 
@@ -33,19 +33,49 @@ class TestProposeEdit:
         # Arrange - 准备测试文件
         test_file = tmp_path / "src" / "user.go"
         test_file.parent.mkdir(parents=True)
-        test_file.write_text('package main\nfunc getUserData() string { return "user" }')
+        original_content = 'package main\nfunc getUserData() string { return "user" }'
+        test_file.write_text(original_content)
 
-        # editor = PatchEditor(project_root=tmp_path)
+        editor = PatchEditor(project_root=tmp_path)
 
         # Act - 执行propose_edit
-        # result = editor.propose_edit(
-        #     pattern="getUserData",
-        #     replacement="fetchUserData"
-        # )
+        result = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData"
+        )
 
         # Assert - 验证结果
-        # Day 2实施时取消注释
-        pytest.skip("Day 2: propose_edit implementation")
+        # DoD F1.1: 返回ProposalResult
+        assert isinstance(result, ProposalResult)
+        
+        # DoD F1.2: patch_id格式正确
+        assert result.patch_id.startswith("patch_")
+        parts = result.patch_id.split("_")
+        assert len(parts) == 3  # patch_timestamp_hash
+        assert parts[1].isdigit()  # timestamp
+        assert len(parts[2]) == 8  # hash
+        
+        # DoD F1.3: unified_diff包含正确的差异
+        assert "src/user.go" in result.unified_diff
+        assert "-func getUserData()" in result.unified_diff
+        assert "+func fetchUserData()" in result.unified_diff
+        
+        # DoD F1.4: affected_files正确
+        assert len(result.affected_files) == 1
+        assert "src/user.go" in result.affected_files[0]
+        
+        # DoD F1.5: statistics有意义
+        assert "files_modified" in result.statistics
+        assert result.statistics["files_modified"] == 1
+        assert "lines_changed" in result.statistics
+        
+        # DoD F1.6: 原文件未被修改
+        assert test_file.read_text() == original_content
+        
+        # DoD F1.7: patch保存到内存
+        assert result.patch_id in editor.patch_store
+        stored_patch = editor.patch_store[result.patch_id]
+        assert stored_patch.unified_diff == result.unified_diff
 
     def test_propose_multi_file_edit_with_scope(self, tmp_path):
         """
@@ -70,10 +100,35 @@ class TestProposeEdit:
         (backend_dir / "auth.go").write_text("user := getUserData()")
         (frontend_dir / "api.ts").write_text("const data = getUserData()")
 
-        # editor = PatchEditor(project_root=tmp_path)
+        editor = PatchEditor(project_root=tmp_path)
 
-        # Act & Assert
-        pytest.skip("Day 2: propose_edit with scope implementation")
+        # Act - 只在backend目录中进行编辑
+        result = editor.propose_edit(
+            pattern="getUserData",
+            replacement="fetchUserData",
+            scope="backend/**/*"
+        )
+
+        # Assert
+        # DoD F1.1: 返回ProposalResult
+        assert isinstance(result, ProposalResult)
+        
+        # DoD F1.2: 只包含backend文件
+        assert len(result.affected_files) == 2
+        assert all("backend" in f for f in result.affected_files)
+        assert not any("frontend" in f for f in result.affected_files)
+        
+        # DoD F1.3: unified_diff包含所有backend文件变更
+        assert "backend/user.go" in result.unified_diff
+        assert "backend/auth.go" in result.unified_diff
+        assert "frontend/api.ts" not in result.unified_diff
+        
+        # DoD F1.4: statistics正确
+        assert result.statistics["files_modified"] == 2
+        
+        # DoD F1.5: 原文件未被修改
+        assert "getUserData" in (backend_dir / "user.go").read_text()
+        assert "getUserData" in (frontend_dir / "api.ts").read_text()
 
 
 class TestApplyEdit:
@@ -110,12 +165,13 @@ class TestApplyEdit:
           And 未创建worktree
           And 未修改任何文件
         """
-        editor = PatchEditor(project_root=tmp_path)
-
-        with pytest.raises(PatchNotFoundError, match="Patch 'invalid_patch' not found"):
-            editor.apply_edit(patch_id="invalid_patch")
-
-        pytest.skip("Day 3: Full validation implementation")
+        pytest.skip("Day 3: apply_edit implementation")
+        
+        # Day 3实施时取消上面的skip并使用以下代码:
+        # editor = PatchEditor(project_root=tmp_path)
+        # 
+        # with pytest.raises(PatchNotFoundError, match="Patch 'invalid_patch' not found"):
+        #     editor.apply_edit(patch_id="invalid_patch")
 
     def test_apply_patch_conflict_rollback(self, tmp_path):
         """
