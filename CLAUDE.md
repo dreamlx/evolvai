@@ -174,6 +174,143 @@ Each supported language (25+ languages including Python, TypeScript, Go, Rust, J
 - **Dashboard** (`src/serena/dashboard.py`) - Web-based log viewer and control interface
 - **CLI** (`src/serena/cli.py`) - Command-line interface for project management and configuration
 
+## 🚨 Development Mandatory Checkpoints
+
+**CRITICAL**: These checkpoints prevent common development failures. **MUST** be followed for every task.
+
+### Checkpoint 1: Before Starting Any Task
+
+**Before writing any code, you MUST be able to answer**:
+
+1. **Which Cycle is this Task in?**
+   - Answer format: "Story X.X, Cycle Y: [Cycle name]"
+   - Source: Story TDD Plan document (e.g., `story-1.2-tdd-plan.md`)
+   - Cannot answer → **STOP** → Re-read Story TDD Plan
+
+2. **Which test scenarios will this Task implement?**
+   - List all test function names: `test_xxx`, `test_yyy`
+   - Source: Red phase of the Cycle in Story TDD Plan
+   - Cannot answer → **STOP** → Re-read Cycle definition
+
+3. **Which acceptance criteria (DoD) does each test verify?**
+   - Map each test → DoD standard (F1/Q1/P1/etc.)
+   - Source: Story document verification section
+   - Cannot answer → **STOP** → You're about to over-engineer
+
+**Example Valid Answers**:
+```
+Task: Integrate PlanValidator into ToolExecutionEngine
+Cycle: Story 1.2, Cycle 1 - Basic Integration Test
+Tests: test_validator_called_when_plan_provided, test_validator_not_called_when_no_plan
+DoD: F1 (PlanValidator must be called), Q1 (100% backward compatible)
+```
+
+### Checkpoint 2: Before Writing Each Test
+
+**Every new test MUST have this docstring format**:
+
+```python
+def test_something(self):
+    """[Brief test description in BDD style]
+
+    Story: story-1.2-tdd-plan.md Cycle 3
+    Scenario: "User can execute tool with valid plan"
+    DoD: F1 - Functional completeness
+
+    Given [precondition]
+    When [action]
+    Then [expected outcome]
+    """
+```
+
+**Rules**:
+- ❌ **Cannot find corresponding Story Scenario** → This is over-engineering → **DO NOT WRITE**
+- ❌ **No DoD mapping** → This is testing implementation details → **DO NOT WRITE**
+- ✅ **Clear Story/Scenario/DoD mapping** → Proceed with test
+
+**Lesson Source**: Feature 2.2 had 40% test failures due to tests not mapping to actual requirements.
+
+### Checkpoint 3: Before Implementation
+
+**Before implementing functions/classes, you MUST**:
+
+1. **Check test interface definition**:
+   - Function name exactly as called in test
+   - Parameter order exactly as in test
+   - Parameter names exactly as in test
+
+2. **Implement according to test interface**:
+   - Do NOT modify function signature "to make it better"
+   - Do NOT reorder parameters "for consistency"
+   - Do NOT rename parameters "for clarity"
+
+3. **If test interface is unreasonable**:
+   - Fix the test FIRST
+   - Then implement according to corrected test
+   - Document why interface was changed
+
+**Why This Matters**:
+- Feature 2.2: 40% failures were interface mismatches
+- Example: Test expected `func(file_path, backup_path)` but implemented `func(backup_path, file_path)`
+
+### Checkpoint 4: Before Git Commit
+
+**Before `git commit`, verify**:
+
+1. **Every new function/class**:
+   - Which test covers it? (Must have answer)
+   - If no test → Why? (Must justify or delete)
+
+2. **Every new test**:
+   - Which DoD standard does it verify? (Must have answer)
+   - If no DoD → Is this over-engineering? (Probably yes)
+
+3. **Fixture usage check**:
+   - Did you test something just because fixture exists?
+   - Rule: **Fixture existence ≠ requirement to test**
+   - Only test based on Story TDD Plan, not available fixtures
+
+**Report to user if**:
+- Found functions with no tests (except justified cases)
+- Found tests with no DoD mapping (potential over-engineering)
+- Need user confirmation before proceeding
+
+### Key Lessons from Past Failures
+
+**Feature 2.2 Post-Mortem** (52/65 tests passed, 80% pass rate):
+
+1. **Interface Mismatches (40% of failures)**:
+   - Cause: Implementation didn't follow test interface
+   - Prevention: Checkpoint 3
+
+2. **Missing Methods (25% of failures)**:
+   - Cause: Tests assumed methods that weren't needed
+   - Prevention: Checkpoint 1 & 2 (map to DoD)
+
+3. **Mock Data Issues (20% of failures)**:
+   - Cause: Over-complex mock setup
+   - Prevention: BDD thinking + KISS principle
+
+4. **Parameter Mismatches (15% of failures)**:
+   - Cause: Required parameters without defaults
+   - Prevention: Checkpoint 3
+
+**Reference**: `docs/testing/standards/tdd-refactoring-guidelines.md` for detailed analysis and KISS principles.
+
+### Emergency Stop Conditions
+
+**STOP IMMEDIATELY if**:
+
+- ❌ You cannot map current work to a Story document
+- ❌ You are writing tests without corresponding DoD standards
+- ❌ You are implementing features not in the Story TDD Plan
+- ❌ You are testing "because the fixture exists"
+
+**Then**:
+1. Ask user: "I cannot find Story/DoD mapping for [X]. Should I stop or proceed?"
+2. Document user's decision
+3. If user says proceed → Add to Story document first
+
 ## Development Patterns
 
 ### Adding New Languages

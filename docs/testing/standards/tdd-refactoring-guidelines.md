@@ -229,6 +229,250 @@ def test_组件集成_端到端行为(self):
 
 ---
 
+## 🎯 BDD思维的测试编写（轻量级）
+
+### 核心理念
+
+**BDD (Behavior-Driven Development)** 的价值在于**思维模式**，而非工具。我们采用轻量级BDD思维，在保持pytest框架的同时，引入结构化的行为驱动方法。
+
+**关键原则**：
+- ✅ 保持pytest框架 - 不引入额外BDD工具（如pytest-bdd, behave）
+- ✅ 采用Given-When-Then注释结构 - 提升测试可读性
+- ✅ 行为驱动命名 - 测试名称表达用户故事
+- ✅ 测试即文档 - 任何人读测试就能理解系统功能
+
+### Given-When-Then 结构
+
+每个测试应遵循清晰的三段式结构：
+
+#### **Given（前置条件）**
+- 设置测试环境和初始状态
+- 准备测试数据
+- 配置依赖和mock
+
+#### **When（执行动作）**
+- 调用被测试的功能
+- 模拟用户操作
+
+#### **Then（验证结果）**
+- 断言期望的行为
+- 验证副作用
+- 检查状态变化
+
+### 行为驱动命名规范
+
+| 场景类型 | 技术驱动命名（避免） | 行为驱动命名（推荐） |
+|---------|---------------------|---------------------|
+| 成功场景 | `test_valid_plan_passes` | `test_user_can_execute_with_valid_plan` |
+| 失败场景 | `test_invalid_plan_raises_error` | `test_execution_blocked_when_plan_invalid` |
+| 边界条件 | `test_max_files_limit` | `test_operation_fails_when_exceeding_file_limit` |
+| 回滚场景 | `test_rollback_on_failure` | `test_changes_reverted_when_operation_fails` |
+
+**命名模式**：
+```python
+test_[角色]_can_[动作]_when_[条件]     # 成功场景
+test_[角色]_cannot_[动作]_when_[条件]  # 失败场景
+test_[系统]_[行为]_when_[触发条件]     # 系统行为
+```
+
+### 示例对比：技术驱动 vs 行为驱动
+
+#### ❌ 技术驱动测试（避免）
+
+```python
+def test_validator_returns_false():
+    """Test validator returns false for empty string."""
+    validator = PlanValidator()
+    plan = ExecutionPlan(
+        validation=ValidationConfig(pre_conditions=[""])
+    )
+    result = validator.validate(plan)
+    assert result.is_valid is False
+```
+
+**问题**：
+- 测试名称关注实现细节（"validator returns false"）
+- 没有说明为什么返回false
+- 缺少业务上下文
+- 不能作为需求文档阅读
+
+#### ✅ 行为驱动测试（推荐）
+
+```python
+def test_validation_fails_when_preconditions_empty(self):
+    """Validation should reject plans with empty precondition strings.
+
+    Scenario: Reject plan with empty validation precondition
+      Given a plan with empty precondition string
+      When validation is performed
+      Then validation should fail
+      And error message should explain the issue
+    """
+    # Given: a plan with empty precondition string
+    validator = PlanValidator()
+    plan = ExecutionPlan(
+        validation=ValidationConfig(pre_conditions=["test", ""])
+    )
+
+    # When: validation is performed
+    result = validator.validate(plan)
+
+    # Then: validation should fail
+    assert result.is_valid is False
+
+    # And: error message should explain the issue
+    assert "empty string" in result.violations[0].message.lower()
+    assert "not allowed" in result.violations[0].message.lower()
+```
+
+**优势**：
+- 测试名称表达业务意图（"validation fails when..."）
+- Scenario描述清晰的业务场景
+- Given-When-Then结构化代码组织
+- 错误消息验证确保用户体验
+- 可以作为需求文档阅读
+
+### BDD思维测试模板
+
+我们提供了完整的BDD测试模板，包含5种常见场景：
+
+1. **成功路径测试** - `test_user_can_[action]_when_[condition]`
+2. **失败路径测试** - `test_user_cannot_[action]_when_[condition]`
+3. **边界条件测试** - `test_[system]_[behavior]_at_[boundary]`
+4. **状态变化测试** - `test_[state]_changes_to_[new_state]_when_[trigger]`
+5. **集成测试** - `test_[A]_integrates_with_[B]_when_[scenario]`
+
+**完整模板**：[BDD测试模板](../../templates/bdd-test-template.md)
+
+### 快速开始BDD测试
+
+#### Step 1: 选择场景类型
+确定你要测试的是哪种场景（成功/失败/边界/状态/集成）
+
+#### Step 2: 使用行为驱动命名
+```python
+# 不要这样
+def test_create_backup():
+    pass
+
+# 应该这样
+def test_user_can_create_backup_of_modified_file():
+    pass
+```
+
+#### Step 3: 添加Scenario描述
+```python
+def test_user_can_create_backup_of_modified_file(self):
+    """User can create a backup before modifying a file.
+
+    Scenario: Create backup for safe editing
+      Given a file that will be modified
+      When user creates a backup
+      Then backup file is created with timestamp suffix
+      And original file remains unchanged
+    """
+```
+
+#### Step 4: 使用Given-When-Then注释
+```python
+    # Given: a file that will be modified
+    manager = RollbackManager()
+    original_file = "/test/project/src/main.py"
+
+    # When: user creates a backup
+    result = manager.create_backup(original_file)
+
+    # Then: backup file is created with timestamp suffix
+    assert result.success
+    assert result.backup_path.endswith(".backup")
+
+    # And: original file remains unchanged
+    # (verified implicitly by backup operation)
+```
+
+### 与KISS原则结合
+
+BDD思维和KISS原则完美互补：
+
+| KISS原则 | BDD思维 | 结合效果 |
+|---------|---------|---------|
+| 专注行为而非实现 | Given-When-Then结构 | 测试更清晰 |
+| 最小化Mock | 用户故事驱动 | Mock更自然 |
+| 简单断言 | 验证用户关心的结果 | 断言更有意义 |
+
+**示例**：
+
+```python
+# KISS + BDD = 清晰的行为验证
+def test_backup_prevents_data_loss_during_edit(self):
+    """Backup mechanism prevents data loss when edit fails.
+
+    Scenario: Safe editing with automatic rollback
+      Given a file with existing content
+      And a backup is created
+      When edit operation fails
+      Then original content is preserved via backup
+    """
+    # Given: a file with existing content
+    manager = RollbackManager()
+
+    # And: a backup is created
+    result = manager.create_backup("/test/file.txt")
+    assert result.success
+
+    # When: edit operation fails (simulated)
+    # Then: original content is preserved via backup
+    assert result.backup_path.exists()  # 专注行为，不关心内部实现
+```
+
+### 测试组织策略
+
+使用测试类按**用户故事**而非**技术模块**组织：
+
+```python
+class TestUserCanCreateAndRestoreBackups:
+    """User story: Create and restore backups for safe editing."""
+
+    def test_user_can_create_backup_before_editing(self):
+        """User workflow: Create backup."""
+        # ...
+
+    def test_user_can_restore_from_backup_after_failure(self):
+        """User workflow: Restore from backup."""
+        # ...
+
+
+class TestSafeEditingConstraints:
+    """User story: System enforces safety constraints."""
+
+    def test_edit_blocked_when_exceeding_file_limit(self):
+        """Safety constraint: File limit."""
+        # ...
+
+    def test_rollback_triggered_when_validation_fails(self):
+        """Safety constraint: Validation."""
+        # ...
+```
+
+### 实施建议
+
+#### Phase 1: 新测试采用BDD思维（立即生效）
+- ✅ 所有新测试使用[BDD测试模板](../../templates/bdd-test-template.md)
+- ✅ 使用行为驱动命名
+- ✅ 添加Scenario描述和Given-When-Then注释
+
+#### Phase 2: 渐进式重构（可选）
+- 旧测试在修改时逐步优化
+- 优先重构失败率高的测试
+- 不强制重写所有现有测试
+
+#### Phase 3: 团队培训（持续）
+- Code Review强调行为验证
+- 分享BDD思维模式文档
+- 定期回顾测试质量
+
+---
+
 ## 🎯 实施策略
 
 ### Phase 1: 重新设计测试用例
