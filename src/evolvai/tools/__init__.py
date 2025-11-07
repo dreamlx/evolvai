@@ -9,5 +9,16 @@ from .patch_editor import (
     PatchEditor,
     ProposalResult,
 )
+from .safe_search import (
+    SafeSearchResult,
+    SafeSearchWrapper,
+)
 
-__all__ = ["ApplyResult", "ConstraintViolationError", "PatchEditor", "ProposalResult"]
+__all__ = [
+    "ApplyResult",
+    "ConstraintViolationError",
+    "PatchEditor",
+    "ProposalResult",
+    "SafeSearchResult",
+    "SafeSearchWrapper",
+]
