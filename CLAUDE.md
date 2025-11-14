@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🧠 专家人格激活（强制执行）
+
+**每次任务开始时必须先激活专家人格：**
+
+### 人格激活加载流程
+1. **读取人格文件**: `CLAUDE-PERSONA.md`
+2. **激活思维模式**: 🧠 → 🎯 → ⚡
+3. **建立行为偏好**: 系统性分析 > 直接行动
+
+### Claude无法真正自我觉察，需要用户监督：
+
+**用户触发词（有效机制）**
+- "专家模式" → 强制重读 CLAUDE-PERSONA.md
+- "深入思考" → 激活系统性分析，不立即修复
+- "不对，有问题" → 暂停操作，重新评估
+- "等一下" → 立即停止当前操作，思考操作并提问
+
+### 自动读取人格文件的前置条件
+- 遇到任何编译/TypeScript错误
+- 准备创建新文件
+- 用户表达不满意时
+
+**激活标志**: 🧠 → 🎯 → ⚡
+
+---
+
 ## Project Overview
 
 **EvolvAI** is an AI behavior engineering platform that optimizes AI assistant efficiency through systematic behavior constraints and thinking optimization.
@@ -372,6 +398,7 @@ Configuration is loaded from (in order of precedence):
 **IMPORTANT**: This project follows a strict documentation organization structure. Before creating, moving, or organizing any documentation files, you MUST consult:
 
 📚 **Documentation Structure Reference**: `docs/.structure.md`
+📋 **Sprint Workflow Guide**: `docs/development/workflow-checklist.md`
 
 ### Quick Rules for AI Assistants
 
@@ -403,6 +430,37 @@ docs/
 
 **Status Markers**:
 Use status tags in document titles: `[DRAFT]`, `[REVIEW]`, `[APPROVED]`, `[ACTIVE]`, `[DEPRECATED]`, `[ARCHIVED]`
+
+### Key Workflow Checkpoints
+
+**When working on Sprint tasks**:
+
+1. **Before creating documents**:
+   - Check `.structure.md` for correct location and naming
+   - Temporary ideas/notes → `sprints/current/_inbox/`
+   - Work items → `sprints/current/{work-item}/`
+
+2. **During Sprint execution**:
+   - Follow `workflow-checklist.md` for TDD cycles
+   - Low-friction recording: use `_inbox/` for quick notes
+   - Use timestamp naming: `YYYYMMDD-brief-desc.md`
+
+3. **Sprint completion** (MANDATORY):
+   - Execute **_inbox/ cleanup** (30-45 min)
+     * Extract ADRs, Lessons, Research from temporary notes
+     * Move personal notes outside project repo
+     * Delete obsolete notes
+   - Execute **5S6A archival** (30 min)
+     * Archive completed work items
+     * Generate Sprint summary
+   
+   **Full process**: See `workflow-checklist.md` Phase 5
+
+**AI Behavior**:
+- ✅ Remind user to clean up `_inbox/` when Sprint ends
+- ❌ Never auto-clean `_inbox/` (user decides note value)
+- ✅ Suggest categorization (ADR/Lesson/Research)
+- ❌ Never auto-move files from `_inbox/`
 
 ### Enforcement Rules
 

@@ -1,7 +1,8 @@
 # EvolvAI 开发和文档管理工作流 Checklist
 
-**版本**: 1.0
+**版本**: 1.1
 **创建日期**: 2025-11-07
+**更新日期**: 2025-11-14
 **状态**: [ACTIVE]
 **基于**: 实际执行的Phase 0-2流程总结
 
@@ -238,7 +239,18 @@ Epic规划 → Story拆分 → TDD开发 → Git提交 → Sprint完成 → 5S6A
 
 ---
 
-## 📋 Phase 5: Sprint完成和5S6A整理
+## 📋 Phase 5: Sprint完成和文档整理
+
+⚠️ **重要提醒**: Sprint 结束时必须完成两个整理环节：
+1. **_inbox/ 整理** - 提炼临时笔记为长期知识（30-45分钟）
+2. **5S6A 归档** - 归档工作区文档（30分钟）
+
+**不整理的后果**：
+- _inbox/ 堆积大量文件，无法区分有价值笔记
+- 临时想法丢失，重复踩坑
+- 知识无法沉淀，经验无法传承
+
+---
 
 ### Sprint Review和Retrospective
 
@@ -248,6 +260,201 @@ Epic规划 → Story拆分 → TDD开发 → Git提交 → Sprint完成 → 5S6A
   - 需要改进的地方
   - 行动项
   - 经验教训
+
+---
+
+### _inbox/ 整理流程（批量处理临时笔记）
+
+**目标**: 将 Sprint 执行中的临时笔记提炼为长期知识，清空 _inbox/
+
+**预期时间**: 30-45分钟/Sprint
+
+---
+
+#### Step 1: 列出所有临时笔记
+
+```bash
+# 查看_inbox目录内容
+ls -1 docs/development/sprints/current/_inbox/
+
+# 统计文件数量
+ls -1 docs/development/sprints/current/_inbox/ | wc -l
+# 预期：<30个文件/Sprint（如果>50个，说明记录过于碎片化）
+```
+
+- [ ] 列出所有 _inbox/ 文件
+- [ ] 检查文件数量（预期 <30个/Sprint）
+
+---
+
+#### Step 2: 逐个文件决策归宿
+
+**决策树（对每个文件）**：
+
+```
+1. 是否有长期价值？
+   ├─ NO → 删除（临时协调笔记、过时讨论）
+   └─ YES → 继续判断
+
+2. 价值类型是什么？
+   ├─ 架构决策
+   │  └─ 提炼为 ADR → docs/architecture/adrs/
+   │
+   ├─ 开发教训
+   │  └─ 提炼为 Lesson → docs/knowledge/lessons-learned/
+   │
+   ├─ 技术研究
+   │  └─ 整理为 Research → docs/knowledge/research/
+   │
+   ├─ 未来想法
+   │  └─ 移动到 → docs/product/backlog/future-ideas/
+   │
+   ├─ 重要讨论记录
+   │  └─ 保留到 → completed/sprint-XXX/_discussions/（可选）
+   │
+   └─ 个人跨项目笔记
+      └─ 移动到个人管理系统（不在项目仓库）
+
+3. 需要重写吗？
+   ├─ 需要 → 使用模板创建正式文档，删除原始笔记
+   └─ 不需要 → 直接移动并重命名
+```
+
+---
+
+#### Step 3: 操作示例（Checklist）
+
+**案例 1: 架构决策**
+
+```bash
+# 文件：20251115-pydantic-performance-discussion.md
+# 内容：讨论了Pydantic vs dataclass性能差异和选型理由
+
+# 判断：有长期价值 + 架构决策
+# 操作：提炼为ADR
+
+# 1. 使用ADR模板
+cp docs/templates/adr-template.md \
+   docs/architecture/adrs/003-pydantic-validation.md
+
+# 2. 从原始笔记提炼内容填入ADR
+# （手动编辑003-pydantic-validation.md）
+
+# 3. 删除原始笔记
+rm docs/development/sprints/current/_inbox/20251115-pydantic-performance-discussion.md
+```
+
+- [ ] 提炼为 ADR（如有架构决策讨论）
+
+---
+
+**案例 2: 开发教训**
+
+```bash
+# 文件：20251116-feature2.2-test-failure-investigation.md
+# 内容：40%测试失败的调查过程和根因分析
+
+# 判断：有长期价值 + 开发教训
+# 操作：提炼为Lesson文档
+
+# 1. 移动并重命名
+mv docs/development/sprints/current/_inbox/20251116-feature2.2-test-failure-investigation.md \
+   docs/knowledge/lessons-learned/2025-11-feature2.2-test-failures.md
+
+# 2. 编辑格式化（添加标题、整理结构）
+# （手动编辑文档，使其结构清晰）
+
+# 3. 更新lessons-learned/index.md
+# （可选：添加到索引中，按标签分类）
+```
+
+- [ ] 提炼为 Lesson（如有踩坑经验）
+
+---
+
+**案例 3: 技术研究**
+
+```bash
+# 文件：20251117-got-event-sourcing-research.md
+# 内容：调研了GoT引擎的事件溯源方案
+
+# 判断：有长期价值 + 技术研究
+# 操作：整理为Research文档
+
+mv docs/development/sprints/current/_inbox/20251117-got-event-sourcing-research.md \
+   docs/knowledge/research/got-event-sourcing-analysis.md
+
+# 编辑格式化
+```
+
+- [ ] 整理为 Research（如有技术调研）
+
+---
+
+**案例 4: 未来想法**
+
+```bash
+# 文件：20251114-epic-003-actor-model-idea.md
+# 内容：Epic 003可以考虑Actor模型实现并发
+
+# 判断：有长期价值 + 未来想法
+# 操作：移动到产品backlog
+
+mv docs/development/sprints/current/_inbox/20251114-epic-003-actor-model-idea.md \
+   docs/product/backlog/future-ideas/epic-003-actor-model.md
+```
+
+- [ ] 移动到 future-ideas（如有未来想法）
+
+---
+
+**案例 5: 个人笔记**
+
+```bash
+# 文件：20251118-cross-project-refactor-pattern.md
+# 内容：这个重构模式可以用到我的CyanEagle项目
+
+# 判断：有价值，但不属于本项目
+# 操作：移动到个人管理系统
+
+# 移动到个人笔记目录（项目仓库外）
+mv docs/development/sprints/current/_inbox/20251118-cross-project-refactor-pattern.md \
+   ~/Documents/PersonalNotes/
+```
+
+- [ ] 移动到个人管理（如为跨项目笔记）
+
+---
+
+**案例 6: 临时笔记（删除）**
+
+```bash
+# 文件：20251119-standup-meeting-notes.md
+# 内容：每日站会的进度同步
+
+# 判断：无长期价值（问题已解决，笔记过时）
+# 操作：删除
+
+rm docs/development/sprints/current/_inbox/20251119-standup-meeting-notes.md
+```
+
+- [ ] 删除无价值笔记
+
+---
+
+#### Step 4: 验证 _inbox/ 清空
+
+```bash
+# 检查_inbox是否清空
+ls docs/development/sprints/current/_inbox/
+
+# 预期结果：空目录，或只有新Sprint的笔记
+```
+
+- [ ] 确认 _inbox/ 已清空
+- [ ] knowledge/ 已更新（新增 Lesson/Research）
+- [ ] architecture/adrs/ 已更新（如有新 ADR）
+- [ ] product/backlog/future-ideas/ 已更新（如有新想法）
 
 ---
 
