@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Optional
 
 from evolvai.core.exceptions import ConstraintViolationError
+from evolvai.core.execution_plan import ExecutionPlan
 from evolvai.core.validation_result import ValidationResult, ValidationViolation, ViolationSeverity
 
 
@@ -132,13 +133,14 @@ class SafeExecWrapper:
 
         self.working_dir = str(working_path)
 
-    def execute(self, command: str, timeout: int) -> ExecutionResult:
+    def execute(self, command: str, timeout: int, execution_plan: Optional[ExecutionPlan] = None) -> ExecutionResult:
         """
         Execute command with precondition checks
 
         Args:
             command: Command to execute
             timeout: Timeout in seconds
+            execution_plan: Optional ExecutionPlan for constraint validation (Day 3)
 
         Returns:
             ExecutionResult with execution details
@@ -149,7 +151,7 @@ class SafeExecWrapper:
         """
         # Check preconditions first (fast-fail)
         start_time = time.perf_counter()
-        self._check_preconditions(command, timeout)
+        self._check_preconditions(command, timeout, execution_plan)
         precondition_time = (time.perf_counter() - start_time) * 1000
 
         # Execute command
@@ -256,11 +258,12 @@ class SafeExecWrapper:
 
         return '\n'.join(head) + omission_marker + '\n'.join(tail)
 
-    def _check_preconditions(self, command: str, timeout: int) -> None:
+    def _check_preconditions(self, command: str, timeout: int, execution_plan: Optional[ExecutionPlan] = None) -> None:
         """
         Check preconditions before execution (fast-fail)
 
         Checks (in order of speed):
+        0. ExecutionPlan timeout constraint (instant) → Day 3
         1. Timeout validation (instant) → Day 2
         2. Absurd commands (regex, <1ms) → AI reasoning failure detection
         3. Interactive commands (regex, <1ms) → Day 2
@@ -270,11 +273,27 @@ class SafeExecWrapper:
         Args:
             command: Command to check
             timeout: Timeout to validate
+            execution_plan: Optional ExecutionPlan for constraint validation
 
         Raises:
             ConstraintViolationError: If any precondition fails
 
         """
+        # Check -1: ExecutionPlan timeout constraint (Day 3)
+        if execution_plan is not None:
+            plan_timeout = execution_plan.limits.timeout_seconds
+            if timeout > plan_timeout:
+                raise _create_violation_error(
+                    field="timeout",
+                    message=(
+                        f"Timeout exceeds plan limit: requested {timeout}s exceeds plan limit {plan_timeout}s\n\n"
+                        f"Requested timeout: {timeout}s\n"
+                        f"Plan timeout limit: {plan_timeout}s\n\n"
+                        f"This ensures AI operations stay within planned resource constraints.\n"
+                        f"Consider adjusting the ExecutionPlan limits or breaking the operation into smaller steps."
+                    ),
+                )
+
         # Check 0: Timeout validation (Day 2)
         if timeout <= 0:
             raise _create_violation_error(
