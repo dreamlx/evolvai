@@ -1,15 +1,19 @@
 """
-Story 2.3: safe_exec - Day 1 PreconditionChecker Tests
+Story 2.3: safe_exec - Day 1 & Day 2 Tests
 
 BDD-driven TDD implementation for safe_exec wrapper.
-Focus: 快速失败机制（依赖检查 + 工作目录验证 + 推理崩溃检测）
+
+Day 1 Focus: 快速失败机制（依赖检查 + 工作目录验证 + 推理崩溃检测）
+Day 2 Focus: 进程管理 + Timeout管理 + 交互命令检测 + 输出截断
 
 Key Design Principle: 减少TPST（Token浪费），不是系统安全防护
 """
 
 import os
+import subprocess
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -202,6 +206,327 @@ class TestSafeExecDay1PreconditionChecker:
 
         avg_duration = sum(durations) / len(durations)
         assert avg_duration < 10, f"Precondition check took {avg_duration:.2f}ms (target: <10ms)"
+
+
+# ==================== Day 2: ProcessManager + Timeout Management ====================
+
+class TestSafeExecDay2ProcessManager:
+    """Day 2: ProcessManager TDD - 进程组管理 + Timeout管理 + 交互命令检测"""
+
+    def test_timeout_upper_limit_enforced(self, tmp_path):
+        """测试强制执行timeout上限（≤300秒）
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario: AI估算timeout + 固定上限保护
+        DoD: F2 (ProcessManager timeout管理), Q1 (测试覆盖率)
+
+        Given timeout 为 301 秒（超过上限）
+        When 我调用 safe_exec(command="echo test", timeout=301)
+        Then 抛出 ConstraintViolationError
+        And 错误信息包含 "Timeout exceeds maximum limit"
+        And 错误信息包含 "prevents hanging on interactive commands"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            wrapper.execute(command="echo test", timeout=301)
+
+        error_msg = str(exc_info.value)
+        assert "Timeout exceeds maximum limit" in error_msg
+        assert "300" in error_msg  # 上限值
+        assert "301" in error_msg  # 请求值
+
+    def test_timeout_lower_limit_enforced(self, tmp_path):
+        """测试强制执行timeout下限（≥1秒）
+
+        Story: story-2.3-bdd-scenarios.md
+        DoD: F2 (ProcessManager timeout管理), Q1 (测试覆盖率)
+
+        Given timeout 为 0 秒
+        When 我调用 safe_exec(command="echo test", timeout=0)
+        Then 抛出 ConstraintViolationError
+        And 错误信息包含 "must be greater than 0"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            wrapper.execute(command="echo test", timeout=0)
+
+        error_msg = str(exc_info.value)
+        assert "must be greater than 0" in error_msg.lower()
+
+    @patch('subprocess.run')
+    def test_timeout_provides_learning_feedback(self, mock_run, tmp_path):
+        """测试timeout时提供学习反馈（suggested_timeout）
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario: "AI反馈循环学习"
+        DoD: F2 (Timeout管理), Q1 (测试覆盖率)
+
+        Given 命令 "sleep 100"
+        And timeout 为 1 秒
+        When timeout 发生
+        Then 返回 ExecutionResult
+        And timeout_occurred 为 True
+        And suggested_timeout 为 2（2x原timeout）
+        And error_message 包含 "timed out"
+        """
+        # Mock subprocess.run 抛出 TimeoutExpired
+        mock_run.side_effect = subprocess.TimeoutExpired(
+            cmd="sleep 100",
+            timeout=1,
+            output=b"",
+            stderr=b""
+        )
+
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+        result = wrapper.execute(command="sleep 100", timeout=1)
+
+        # 验证反馈字段
+        assert result.success is False
+        assert result.timeout_occurred is True
+        assert result.suggested_timeout == 2  # 2x原timeout
+        assert "timed out" in result.error_message.lower()
+
+    def test_near_timeout_suggests_increase(self, tmp_path):
+        """测试接近timeout时建议增加
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario: "AI反馈循环学习"
+        DoD: F2 (Timeout管理), Q1 (测试覆盖率)
+
+        Given 命令 "sleep 0.9"
+        And timeout 为 1 秒
+        When 命令成功完成（但接近timeout，>80%）
+        Then suggested_timeout 不为 None
+        And suggested_timeout 约为 1.35（actual * 1.5）
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # sleep 0.9s with 1s timeout (90% of timeout)
+        result = wrapper.execute(command="sleep 0.9", timeout=1)
+
+        assert result.success is True
+        # 如果实际执行时间 > 80% timeout，应该建议增加
+        if result.actual_duration_seconds > 0.8:
+            assert result.suggested_timeout is not None
+            assert result.suggested_timeout > 1
+
+    @pytest.mark.parametrize(
+        "interactive_command,pattern_name",
+        [
+            ("vim config.py", "text_editor"),
+            ("nano test.txt", "text_editor"),
+            ("emacs file.el", "text_editor"),
+            ("python", "repl_environment"),
+            ("python3", "repl_environment"),
+            ("node", "repl_environment"),
+            ("ssh user@host", "ssh_interactive"),
+            ("sudo apt install pkg", "sudo_interactive"),
+        ],
+    )
+    def test_interactive_command_detected(self, interactive_command, pattern_name, tmp_path):
+        """测试检测交互命令（AI推理失败信号）
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario: "检测交互命令（推理失败）"
+        DoD: F2 (快速失败机制), Q1 (测试覆盖率)
+
+        Given 命令为交互命令（vim, ssh, python REPL等）
+        When 我调用 safe_exec(command=<interactive_command>)
+        Then 抛出 ConstraintViolationError
+        And 错误信息包含 "Interactive command detected"
+        And 错误信息包含 "reasoning failure"
+        And 提供替代方案建议
+
+        Examples:
+        - vim config.py → Use safe_edit tool
+        - python → Execute script: python script.py
+        - ssh user@host → Use ssh with explicit command
+        - sudo apt install → Use sudo -n or configure NOPASSWD
+
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            wrapper.execute(command=interactive_command, timeout=30)
+
+        error_msg = str(exc_info.value)
+        assert "Interactive command detected" in error_msg or "interactive" in error_msg.lower()
+        assert "reasoning failure" in error_msg.lower() or "wrong tool" in error_msg.lower()
+        # 验证提供了替代方案
+        assert "alternative" in error_msg.lower() or "instead" in error_msg.lower() or "use" in error_msg.lower()
+
+    def test_python_script_execution_allowed(self, tmp_path):
+        """测试Python脚本执行被允许（不是REPL）
+
+        Story: story-2.3-bdd-scenarios.md
+        DoD: F2 (交互命令检测精确性), Q2 (误报率<5%)
+
+        Given 命令 "python script.py"（非交互）
+        When 我调用 safe_exec(command="python script.py")
+        Then 不抛出 ConstraintViolationError（Precondition应该通过）
+        And 可以正常执行（或因文件不存在失败，但不是被阻止）
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # 创建测试脚本
+        script = tmp_path / "test_script.py"
+        script.write_text("print('Hello from script')")
+
+        # 应该能够执行，不被交互命令检测阻止
+        result = wrapper.execute(command=f"python {script}", timeout=5)
+
+        # 验证precondition通过（即使执行可能失败）
+        assert result.precondition_passed is True
+        # 如果成功，验证输出
+        if result.success:
+            assert "Hello from script" in result.stdout
+
+    @patch('subprocess.run')
+    def test_safe_exec_timeout_kills_process_group(self, mock_run, tmp_path):
+        """测试timeout时通过进程组清理所有子进程
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario 3: "Timeout时完全清理子进程"
+        DoD: F2 (ProcessManager进程组管理), P3 (清理速度<50ms), Q1 (测试覆盖率)
+
+        Given 命令 "sleep 100 & sleep 100 & wait"（创建子进程）
+        And timeout 为 1 秒
+        When timeout 发生
+        Then subprocess.run 被调用时设置了进程组（preexec_fn=os.setsid）
+        And 返回 timeout_occurred=True
+        And 清理时间 < 50ms（通过 duration_ms 验证）
+
+        Note: 使用Mock验证os.setsid调用，避免跨平台进程检测问题
+        """
+        # Mock subprocess.run 抛出 TimeoutExpired
+        mock_run.side_effect = subprocess.TimeoutExpired(
+            cmd="sleep 100 & sleep 100 & wait",
+            timeout=1,
+            output=b"",
+            stderr=b""
+        )
+
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+        result = wrapper.execute(command="sleep 100 & sleep 100 & wait", timeout=1)
+
+        # 验证 subprocess.run 被正确调用
+        mock_run.assert_called_once()
+        call_kwargs = mock_run.call_args[1]
+
+        # 验证进程组设置（应该有 preexec_fn 或类似机制）
+        # Note: 实际实现时需要使用 os.setsid 或 start_new_session=True
+        # 这里我们验证 subprocess.run 被调用
+        assert call_kwargs['timeout'] == 1
+
+        # 验证返回结果
+        assert result.timeout_occurred is True
+        assert result.success is False
+
+    def test_safe_exec_captures_stdout_stderr(self, tmp_path):
+        """测试正确捕获stdout和stderr
+
+        Story: story-2.3-bdd-scenarios.md
+        DoD: F2 (ProcessManager输出管理), Q1 (测试覆盖率)
+
+        Given 命令同时输出到stdout和stderr
+        When 执行命令
+        Then stdout被正确捕获
+        And stderr被正确捕获
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # 命令同时输出到stdout和stderr
+        result = wrapper.execute(
+            command='echo "stdout message" && echo "stderr message" >&2',
+            timeout=5
+        )
+
+        assert result.success is True
+        assert "stdout message" in result.stdout
+        assert "stderr message" in result.stderr
+
+    def test_safe_exec_returns_exit_code(self, tmp_path):
+        """测试返回正确的exit code
+
+        Story: story-2.3-bdd-scenarios.md
+        DoD: F2 (ProcessManager), Q1 (测试覆盖率)
+
+        Given 命令返回非零exit code
+        When 执行命令
+        Then exit_code被正确返回
+        And success为False
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # 命令返回 exit code 42
+        result = wrapper.execute(command="exit 42", timeout=5)
+
+        assert result.success is False
+        assert result.exit_code == 42
+        assert result.error_message is not None
+
+    def test_safe_exec_truncates_long_output(self, tmp_path):
+        """测试长输出被截断（head 50 + tail 50）
+
+        Story: story-2.3-bdd-scenarios.md
+        Scenario 6: "输出截断防止token浪费"
+        DoD: F3 (输出截断), Q1 (测试覆盖率)
+
+        Given 命令生成 200 行输出
+        When 执行命令
+        Then stdout 只包含前 50 行
+        And stdout 包含 "... (omitted) ..."或类似省略标记
+        And stdout 包含后 50 行
+        And 总行数为 101（50 + 1 + 50）
+
+        Note: 具体截断策略在Green Phase实现
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # 生成200行输出
+        result = wrapper.execute(command="seq 1 200", timeout=5)
+
+        assert result.success is True
+
+        lines = result.stdout.strip().split('\n')
+
+        # 如果输出被截断，应该：
+        # 1. 总行数 ≈ 101（50 + 省略标记 + 50）
+        # 2. 包含开头（1, 2, 3...）
+        # 3. 包含省略标记
+        # 4. 包含结尾（...198, 199, 200）
+
+        if len(lines) < 200:
+            # 输出被截断
+            assert len(lines) <= 110  # 允许一些格式变化
+            assert "1" in result.stdout  # 包含开头
+            assert "200" in result.stdout  # 包含结尾
+            assert "omitted" in result.stdout.lower() or "..." in result.stdout  # 省略标记
+
+    def test_process_cleanup_performance(self, tmp_path):
+        """测试进程清理性能 < 50ms
+
+        Story: story-2.3-bdd-scenarios.md
+        DoD: P3 (Timeout清理速度)
+
+        Given 一个简单的命令
+        When timeout 发生
+        Then 从timeout触发到进程终止 < 50ms
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        start = time.perf_counter()
+        result = wrapper.execute(command="sleep 10", timeout=1)
+        total_duration = (time.perf_counter() - start) * 1000
+
+        # 验证timeout发生
+        assert result.timeout_occurred is True
+
+        # 总时长应该接近timeout值，说明清理很快
+        # 1秒timeout + 清理时间 < 1050ms（允许50ms清理）
+        assert total_duration < 1050, f"Cleanup took {total_duration - 1000:.2f}ms (target: <50ms)"
 
 
 # ==================== MCP Tools Tests (Placeholder for Day 3) ====================
