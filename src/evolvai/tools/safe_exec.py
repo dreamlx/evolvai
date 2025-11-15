@@ -58,11 +58,16 @@ class ExecutionResult:
     duration_ms: float
     precondition_passed: bool
     error_message: Optional[str] = None
-    
+
     # Day 2: Timeout管理和反馈循环
     timeout_occurred: bool = False
     actual_duration_seconds: float = 0.0
     suggested_timeout: Optional[int] = None
+
+    # Story 2.4: Interactive Confirmation
+    confirmation_required: bool = False
+    confirmation_message: Optional[str] = None
+    risk_level: str = "low"  # "low", "medium", "high"
 
 
 # Absurd command patterns (3-5 rules, not 30-50)
@@ -86,6 +91,23 @@ INTERACTIVE_COMMAND_PATTERNS = [
 
 # Day 2: Timeout limits (防止交互命令无限等待)
 MAX_TIMEOUT_SECONDS = 300  # 5 minutes hard limit
+
+# Story 2.4: Confirmation required patterns (high-risk operations requiring user confirmation)
+# These detect contextual reasoning failures (范围误判、目标混淆) requiring user confirmation
+CONFIRMATION_REQUIRED_PATTERNS = [
+    # P0: Wildcard delete (highest risk - user explicitly requested in feedback)
+    (r'rm\s+-rf?\s+.*\*', "wildcard_delete", "high",
+     "Deleting with wildcard - please confirm exact targets"),
+
+    # P1: Delete current directory
+    (r'rm\s+-rf?\s+\./?$', "delete_current_dir", "high",
+     "Deleting current directory - please confirm"),
+
+    # P2: Delete source code directories
+    (r'rm\s+-rf?\s+\./(src|lib|pkg|app|server|client)/?$',
+     "delete_source_dir", "medium",
+     "Deleting source code directory - please confirm"),
+]
 
 
 class SafeExecWrapper:
@@ -133,14 +155,27 @@ class SafeExecWrapper:
 
         self.working_dir = str(working_path)
 
-    def execute(self, command: str, timeout: int, execution_plan: Optional[ExecutionPlan] = None) -> ExecutionResult:
+    def execute(
+        self,
+        command: str,
+        timeout: int,
+        execution_plan: Optional[ExecutionPlan] = None,
+        confirmed: bool = False,
+    ) -> ExecutionResult:
         """
-        Execute command with precondition checks
+        Execute command with precondition checks and optional confirmation
+
+        Two-phase execution (Story 2.4):
+        1. First call (confirmed=False): Returns confirmation_required=True if risky
+        2. Second call (confirmed=True): Executes after user confirmation
+
+        Note: Absurd commands (rm -rf /) are blocked regardless of confirmed flag.
 
         Args:
             command: Command to execute
             timeout: Timeout in seconds
             execution_plan: Optional ExecutionPlan for constraint validation (Day 3)
+            confirmed: Skip confirmation check if True (Story 2.4 Day 2)
 
         Returns:
             ExecutionResult with execution details
@@ -153,6 +188,22 @@ class SafeExecWrapper:
         start_time = time.perf_counter()
         self._check_preconditions(command, timeout, execution_plan)
         precondition_time = (time.perf_counter() - start_time) * 1000
+
+        # Story 2.4: Check if confirmation required (unless already confirmed)
+        if not confirmed:
+            confirmation = self._check_confirmation_required(command)
+            if confirmation:
+                return ExecutionResult(
+                    success=False,
+                    exit_code=0,
+                    stdout="",
+                    stderr="",
+                    duration_ms=precondition_time,
+                    precondition_passed=True,
+                    confirmation_required=True,
+                    confirmation_message=confirmation["message"],
+                    risk_level=confirmation["risk_level"],
+                )
 
         # Execute command
         try:
@@ -257,6 +308,33 @@ class SafeExecWrapper:
         omission_marker = f"\n... ({omitted_count} lines omitted) ...\n"
 
         return '\n'.join(head) + omission_marker + '\n'.join(tail)
+
+    def _check_confirmation_required(self, command: str) -> Optional[dict]:
+        """
+        Check if command requires user confirmation (Story 2.4)
+
+        Detects high-risk operations requiring user confirmation:
+        - Wildcard deletes (rm -rf ./tmp_*)
+        - Current directory deletes (rm -rf .)
+        - Source code directory deletes (rm -rf ./src)
+
+        Args:
+            command: Command to check
+
+        Returns:
+            None if no confirmation needed
+            Dict with 'message' and 'risk_level' if confirmation required
+
+        """
+        for pattern, pattern_name, risk_level, message in CONFIRMATION_REQUIRED_PATTERNS:
+            if re.search(pattern, command, re.IGNORECASE):
+                return {
+                    "pattern_name": pattern_name,
+                    "risk_level": risk_level,
+                    "message": message,
+                }
+
+        return None
 
     def _check_preconditions(self, command: str, timeout: int, execution_plan: Optional[ExecutionPlan] = None) -> None:
         """

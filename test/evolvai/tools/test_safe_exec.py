@@ -696,3 +696,429 @@ class TestSafeExecMCPTools:
         assert "command" in param_names
         assert "timeout" in param_names
         assert "working_dir" in param_names
+
+
+# ==================== Story 2.4: Interactive Confirmation Tests ====================
+
+class TestSafeExecStory24Day1CoreInfrastructure:
+    """Story 2.4 Day 1: Core Infrastructure - Confirmation Detection"""
+
+    def test_execution_result_has_confirmation_fields(self, tmp_path):
+        """测试ExecutionResult包含confirmation相关字段
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.1
+        DoD: F3 (返回confirmation_required结果)
+
+        Given ExecutionResult dataclass定义
+        When 检查字段
+        Then 应包含:
+          - confirmation_required: bool
+          - confirmation_message: Optional[str]
+          - risk_level: str
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="echo test", timeout=5)
+
+        # Verify confirmation fields exist
+        assert hasattr(result, 'confirmation_required')
+        assert hasattr(result, 'confirmation_message')
+        assert hasattr(result, 'risk_level')
+
+    def test_execution_result_defaults_no_confirmation(self, tmp_path):
+        """测试ExecutionResult默认值为no confirmation
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.1
+        DoD: Q3 (向后兼容性)
+
+        Given 正常命令执行
+        When 获取ExecutionResult
+        Then confirmation_required = False
+        And confirmation_message = None
+        And risk_level = "low"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="echo test", timeout=5)
+
+        assert result.confirmation_required is False
+        assert result.confirmation_message is None
+        assert result.risk_level == "low"
+
+    def test_detect_wildcard_delete_rm_rf(self, tmp_path):
+        """测试检测通配符删除（rm -rf）
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.2
+        DoD: F1 (检测通配符删除操作)
+
+        Given 命令 "rm -rf ./tmp_*"
+        When SafeExecWrapper.execute() is called
+        Then confirmation_required = True
+        And confirmation_message 说明风险
+        And risk_level = "high"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -rf ./tmp_*", timeout=5)
+
+        assert result.confirmation_required is True
+        assert result.confirmation_message is not None
+        assert "wildcard" in result.confirmation_message.lower()
+        assert result.risk_level == "high"
+
+    def test_detect_wildcard_delete_rm(self, tmp_path):
+        """测试检测通配符删除（rm without -f）
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.2
+        DoD: F1 (检测通配符删除操作)
+
+        Given 命令 "rm -r ./logs_*"
+        When SafeExecWrapper.execute() is called
+        Then confirmation_required = True
+        And risk_level = "high"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -r ./logs_*", timeout=5)
+
+        assert result.confirmation_required is True
+        assert result.risk_level == "high"
+
+    def test_detect_delete_current_directory(self, tmp_path):
+        """测试检测删除当前目录
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.3
+        DoD: F2 (检测删除当前目录操作)
+
+        Given 命令 "rm -rf ."
+        When SafeExecWrapper.execute() is called
+        Then confirmation_required = True
+        And confirmation_message 说明风险
+        And risk_level = "high"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -rf .", timeout=5)
+
+        assert result.confirmation_required is True
+        assert result.confirmation_message is not None
+        assert "current directory" in result.confirmation_message.lower()
+        assert result.risk_level == "high"
+
+    def test_detect_delete_source_directory(self, tmp_path):
+        """测试检测删除源代码目录
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.4
+        DoD: F1 (检测高风险操作)
+
+        Given 命令 "rm -rf ./src"
+        When SafeExecWrapper.execute() is called
+        Then confirmation_required = True
+        And risk_level = "medium"
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -rf ./src", timeout=5)
+
+        assert result.confirmation_required is True
+        assert result.risk_level == "medium"
+
+    def test_normal_commands_no_confirmation(self, tmp_path):
+        """测试正常命令不需要confirmation
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.5
+        DoD: Q2 (误报率 < 5%)
+
+        Given 命令 "ls -la"
+        When SafeExecWrapper.execute() is called
+        Then confirmation_required = False
+        And 命令正常执行
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="ls -la", timeout=5)
+
+        assert result.confirmation_required is False
+        assert result.success is True
+        assert result.exit_code == 0
+
+    def test_absurd_commands_still_blocked(self, tmp_path):
+        """测试荒谬命令仍然被阻止（向后兼容Story 2.3）
+
+        Story: story-2.4-tdd-plan.md Day 1 Scenario 1.6
+        DoD: Q3 (向后兼容性)
+
+        Given 命令 "rm -rf /"
+        When SafeExecWrapper.execute() is called
+        Then 抛出 ConstraintViolationError
+        (Story 2.3行为保持不变)
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            wrapper.execute(command="rm -rf /", timeout=5)
+
+        error_msg = str(exc_info.value)
+        assert "Absurd command detected" in error_msg
+
+
+class TestSafeExecStory24Day2ConfirmationFlow:
+    """Story 2.4 Day 2: Confirmation Flow - confirmed parameter support"""
+
+    def test_first_execution_returns_confirmation_required(self, tmp_path):
+        """测试首次执行返回confirmation_required
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.1
+        DoD: F3 (返回confirmation_required结果)
+
+        Given 高风险命令 "rm -rf ./tmp_*"
+        When SafeExecWrapper.execute() 不带confirmed标志
+        Then confirmation_required = True
+        And command NOT executed
+        And stdout/stderr empty
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -rf ./tmp_*", timeout=5)
+
+        assert result.confirmation_required is True
+        assert result.confirmation_message is not None
+        assert result.stdout == ""
+        assert result.stderr == ""
+        assert result.exit_code == 0  # No execution occurred
+
+    def test_first_execution_does_not_execute_command(self, tmp_path):
+        """测试首次执行不实际运行命令
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.1
+        DoD: F3 (返回confirmation_required结果)
+
+        Given 高风险命令且working_dir有文件
+        When 第一次execute()调用
+        Then 文件不被删除（命令未执行）
+        """
+        # Create test files
+        test_file = tmp_path / "tmp_test.txt"
+        test_file.write_text("test content")
+
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        result = wrapper.execute(command="rm -rf ./tmp_*", timeout=5)
+
+        # Verify confirmation required
+        assert result.confirmation_required is True
+
+        # Verify command was NOT executed (file still exists)
+        assert test_file.exists()
+        assert test_file.read_text() == "test content"
+
+    def test_second_execution_with_confirmed_true_proceeds(self, tmp_path):
+        """测试第二次执行with confirmed=True正常执行
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.2
+        DoD: F4 (支持confirmed=True跳过确认)
+
+        Given 高风险命令 "rm -rf ./tmp_*"
+        When SafeExecWrapper.execute(confirmed=True)
+        Then confirmation_required = False
+        And command executes normally
+        """
+        # Create test file
+        test_file = tmp_path / "tmp_test.txt"
+        test_file.write_text("test content")
+
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # Second execution with confirmed=True
+        result = wrapper.execute(command="rm -rf ./tmp_*", timeout=5, confirmed=True)
+
+        # Verify no confirmation required
+        assert result.confirmation_required is False
+
+        # Verify command was executed (file deleted)
+        assert not test_file.exists()
+
+    def test_confirmed_only_skips_confirmation_not_absurd(self, tmp_path):
+        """测试confirmed标志只跳过confirmation，不跳过absurd检查
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.3
+        DoD: Q3 (向后兼容性 - absurd commands仍被阻止)
+
+        Given 荒谬命令 "rm -rf /"
+        When SafeExecWrapper.execute(confirmed=True)
+        Then 仍然抛出 ConstraintViolationError
+        (confirmed flag不能绕过absurd命令检查)
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # Even with confirmed=True, absurd commands should be blocked
+        with pytest.raises(ConstraintViolationError) as exc_info:
+            wrapper.execute(command="rm -rf /", timeout=5, confirmed=True)
+
+        error_msg = str(exc_info.value)
+        assert "Absurd command detected" in error_msg
+
+    def test_backward_compatible_no_confirmed_param(self, tmp_path):
+        """测试向后兼容 - 无confirmed参数
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.4
+        DoD: Q3 (向后兼容性)
+
+        Given 已有代码调用execute(command, timeout)
+        When 不提供confirmed参数
+        Then confirmation逻辑正常工作
+        And 无错误发生
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # Call without confirmed parameter (backward compatible)
+        result = wrapper.execute(command="echo test", timeout=5)
+
+        # Should work normally
+        assert result.success is True
+        assert result.confirmation_required is False
+
+    def test_confirmed_false_same_as_no_param(self, tmp_path):
+        """测试confirmed=False与不提供参数效果相同
+
+        Story: story-2.4-tdd-plan.md Day 2 Scenario 2.4
+        DoD: Q3 (向后兼容性)
+
+        Given 高风险命令
+        When execute(confirmed=False)
+        Then 结果与不提供confirmed参数相同
+        """
+        wrapper = SafeExecWrapper(working_dir=str(tmp_path))
+
+        # Call with confirmed=False (explicit)
+        result1 = wrapper.execute(command="rm -rf ./tmp_*", timeout=5, confirmed=False)
+
+        # Call without confirmed parameter (implicit default)
+        result2 = wrapper.execute(command="rm -rf ./tmp_*", timeout=5)
+
+        # Both should require confirmation
+        assert result1.confirmation_required is True
+        assert result2.confirmation_required is True
+        assert result1.confirmation_message == result2.confirmation_message
+
+
+class TestSafeExecStory24Day3MCPIntegration:
+    """Story 2.4 Day 3: MCP Integration - SafeExecTool confirmation support"""
+
+    def test_safe_exec_tool_returns_confirmation_required_json(self, tmp_path):
+        """测试SafeExecTool返回confirmation_required via JSON
+
+        Story: story-2.4-tdd-plan.md Day 3 Scenario 3.1
+        DoD: F5 (MCP工具层自动询问)
+
+        Given SafeExecTool instance
+        When apply() 被调用with high-risk command
+        Then JSON response includes confirmation_required=true
+        And includes confirmation_message
+        And includes risk_level
+        """
+        from unittest.mock import MagicMock
+        from evolvai.tools.safe_exec_tool import SafeExecTool
+        import json
+
+        # Create mock agent
+        mock_agent = MagicMock()
+        mock_agent.get_active_project_or_raise.return_value.root = str(tmp_path)
+
+        # Instantiate tool
+        tool = SafeExecTool(agent=mock_agent)
+
+        # Call with high-risk command
+        result_json = tool.apply(
+            command="rm -rf ./tmp_*",
+            timeout=5,
+            working_dir=str(tmp_path)
+        )
+
+        # Parse JSON
+        result = json.loads(result_json)
+
+        # Verify confirmation fields present
+        assert "confirmation_required" in result
+        assert result["confirmation_required"] is True
+        assert "confirmation_message" in result
+        assert result["confirmation_message"] is not None
+        assert "risk_level" in result
+        assert result["risk_level"] == "high"
+
+    def test_safe_exec_tool_accepts_confirmed_param(self, tmp_path):
+        """测试SafeExecTool接受confirmed参数
+
+        Story: story-2.4-tdd-plan.md Day 3 Scenario 3.2
+        DoD: F4 (支持confirmed=True跳过确认)
+
+        Given SafeExecTool instance
+        When apply() is called with confirmed=True
+        Then confirmation is skipped
+        And command executes normally
+        """
+        from unittest.mock import MagicMock
+        from evolvai.tools.safe_exec_tool import SafeExecTool
+        import json
+
+        # Create test file
+        test_file = tmp_path / "tmp_test.txt"
+        test_file.write_text("test content")
+
+        # Create mock agent
+        mock_agent = MagicMock()
+        mock_agent.get_active_project_or_raise.return_value.root = str(tmp_path)
+
+        # Instantiate tool
+        tool = SafeExecTool(agent=mock_agent)
+
+        # Call with confirmed=True
+        result_json = tool.apply(
+            command="rm -rf ./tmp_*",
+            timeout=5,
+            working_dir=str(tmp_path),
+            confirmed=True
+        )
+
+        # Parse JSON
+        result = json.loads(result_json)
+
+        # Verify no confirmation required and command executed
+        assert result["confirmation_required"] is False
+        assert not test_file.exists()  # File was deleted
+
+    def test_safe_exec_tool_json_includes_confirmation_fields(self, tmp_path):
+        """测试SafeExecTool JSON包含所有confirmation字段
+
+        Story: story-2.4-tdd-plan.md Day 3 Scenario 3.3
+        DoD: F3 (返回confirmation_required结果)
+
+        Given SafeExecTool
+        When JSON response is generated
+        Then includes confirmation_required, confirmation_message, risk_level
+        """
+        from unittest.mock import MagicMock
+        from evolvai.tools.safe_exec_tool import SafeExecTool
+        import json
+
+        mock_agent = MagicMock()
+        mock_agent.get_active_project_or_raise.return_value.root = str(tmp_path)
+
+        tool = SafeExecTool(agent=mock_agent)
+
+        # Test both high-risk and normal commands
+        high_risk_json = tool.apply(command="rm -rf ./tmp_*", timeout=5, working_dir=str(tmp_path))
+        normal_json = tool.apply(command="echo test", timeout=5, working_dir=str(tmp_path))
+
+        high_risk = json.loads(high_risk_json)
+        normal = json.loads(normal_json)
+
+        # High-risk command
+        assert "confirmation_required" in high_risk
+        assert "confirmation_message" in high_risk
+        assert "risk_level" in high_risk
+
+        # Normal command
+        assert "confirmation_required" in normal
+        assert "confirmation_message" in normal
+        assert "risk_level" in normal
