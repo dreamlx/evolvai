@@ -36,6 +36,7 @@ class FileChange:
     original_content: str
     new_content: str
     match_count: int
+    rollback_hash: Optional[str] = None  # 文件级备份ID（精确回滚）
 
 
 class BatchEditor:
@@ -266,23 +267,23 @@ class BatchEditor:
         """创建文件备份
 
         Args:
-            changes: 文件变更列表
+            changes: 文件变更列表（会修改change.rollback_hash）
 
         Returns:
-            rollback_id: 回滚点ID
+            rollback_id: 批次回滚点ID（第一个文件的hash）
 
         Raises:
             RuntimeError: 备份创建失败时抛出
         """
-        rollback_results = []
         for change in changes:
             result = self.rollback_manager.create_file_backup(str(change.file_path))
             if not result.success:
                 raise RuntimeError(f"Failed to create backup for {change.file_path}")
-            rollback_results.append(result)
+            # 保存每个文件的精确rollback_hash
+            change.rollback_hash = result.rollback_hash
 
-        # 使用第一个文件的rollback hash作为批次ID
-        return rollback_results[0].rollback_hash if rollback_results else None
+        # 返回第一个文件的hash作为批次ID（向后兼容）
+        return changes[0].rollback_hash if changes else None
 
     def _write_changes(self, changes: list[FileChange]) -> None:
         """原子性写入文件变更
@@ -304,15 +305,31 @@ class BatchEditor:
             raise RuntimeError(f"Write failed: {e}") from e
 
     def _rollback_changes(self, changes: list[FileChange]) -> None:
-        """回滚变更
+        """精确回滚变更（使用文件级备份ID）
 
         Args:
-            changes: 需要回滚的文件变更列表
+            changes: 需要回滚的文件变更列表（必须有rollback_hash）
+
+        设计原则：
+        - 只恢复batch_edit修改的文件（不影响用户其他工作）
+        - 使用精确的rollback_hash（不依赖smart_rollback猜测）
+        - 逐个回滚，单个失败不影响其他文件
         """
-        # 使用RollbackManager的智能回滚逐个恢复文件
         for change in changes:
+            if not change.rollback_hash:
+                # 没有备份ID，跳过（理论上不应该发生）
+                continue
+
             try:
-                self.rollback_manager.smart_rollback(str(change.file_path))
+                # 使用精确的rollback_hash恢复文件
+                result = self.rollback_manager.rollback_file_backup(
+                    change.rollback_hash,
+                    str(change.file_path)
+                )
+                if not result.success:
+                    # 记录失败但继续其他文件
+                    pass
             except Exception:
                 # 单个文件回滚失败，继续回滚其他文件
+                # 确保尽可能多的文件被恢复
                 pass
