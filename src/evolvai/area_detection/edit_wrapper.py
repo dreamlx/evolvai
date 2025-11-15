@@ -1,6 +1,6 @@
 """
 安全编辑包装器
-集成AreaDetector、FeedbackSystem、EditValidator和RollbackManager
+集成AreaDetector、FeedbackSystem和RollbackManager
 提供安全的编辑操作接口
 """
 
@@ -10,7 +10,6 @@ from typing import Any, Optional
 
 from .data_models import AppliedArea, EditValidationError, ProjectArea, RollbackStrategy
 from .detector import AreaDetector
-from .edit_validator import EditValidator
 from .feedback import FeedbackSystem
 from .rollback_manager import RollbackManager
 
@@ -42,7 +41,7 @@ class SafeEditWrapper:
         self.feedback_system = FeedbackSystem() if agent else None
 
         # 组件将在第一次使用时初始化
-        self._edit_validator: Optional[EditValidator] = None
+        # self._edit_validator: Optional[EditValidator] = None  # Removed in Story 2.2
         self._rollback_manager: Optional[RollbackManager] = None
 
         # 性能指标
@@ -96,8 +95,8 @@ class SafeEditWrapper:
             areas, applied_areas = self._get_project_areas()
             detected_language = language or self._detect_language(file_path, content)
 
-            # 2. 初始化验证器和回滚管理器
-            self._edit_validator = EditValidator(areas, applied_areas)
+            # 2. 初始化回滚管理器（验证器已在Story 2.2中移除）
+            # self._edit_validator = EditValidator(areas, applied_areas)  # Removed in Story 2.2
             self._rollback_manager = RollbackManager()
 
             # 3. 读取原始内容
@@ -326,7 +325,7 @@ class SafeEditWrapper:
         detected_language = kwargs.get("language") or self._detect_language(file_path, original_content)
 
         # 执行验证
-        self._edit_validator = EditValidator(areas, applied_areas)
+        # self._edit_validator = EditValidator(areas, applied_areas)  # Removed in Story 2.2
         validation_results = self._execute_validation_chain(
             file_path=file_path,
             original_content=original_content,

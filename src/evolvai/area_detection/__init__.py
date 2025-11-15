@@ -4,7 +4,7 @@
 
 from .data_models import AppliedArea, EditValidationError, EditValidationResult, ProjectArea, QueryRouting, RollbackResult, RollbackStrategy
 from .detector import AreaDetector
-from .edit_validator import EditValidator
+# from .edit_validator import EditValidator  # Removed in Story 2.2
 from .edit_wrapper import SafeEditWrapper
 from .feedback import ErrorResponse, ExecutionReport, FeedbackSystem, FixSuggestion
 from .rollback_manager import RollbackManager
@@ -17,7 +17,7 @@ __all__ = [
     "ConstraintViolationError",
     "EditValidationError",
     "EditValidationResult",
-    "EditValidator",
+    # "EditValidator",  # Removed in Story 2.2
     "ErrorResponse",
     "ExecutionReport",
     "FeedbackSystem",
