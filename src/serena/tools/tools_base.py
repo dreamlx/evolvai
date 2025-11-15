@@ -305,7 +305,8 @@ class ToolRegistry:
     def __init__(self) -> None:
         self._tool_dict: dict[str, RegisteredTool] = {}
         for cls in iter_subclasses(Tool):
-            if not cls.__module__.startswith("serena.tools"):
+            # Include tools from both serena.tools and evolvai.tools
+            if not (cls.__module__.startswith("serena.tools") or cls.__module__.startswith("evolvai.tools")):
                 continue
             is_optional = issubclass(cls, ToolMarkerOptional)
             name = cls.get_name_from_cls()

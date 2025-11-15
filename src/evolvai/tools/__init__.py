@@ -14,6 +14,9 @@ from .safe_search import (
     SafeSearchWrapper,
 )
 
+# Note: MCP tool wrappers (SafeExecTool, BatchEditTool) are imported
+# in serena.tools.__init__.py to avoid circular import issues
+
 __all__ = [
     "ApplyResult",
     "ConstraintViolationError",

@@ -15,3 +15,7 @@ from .workflow_tools import *
 from .jetbrains_tools import *
 from .patch_editor_tools import *  # safe_edit Patch-First architecture (Story 2.2)
 from .safe_search_tool import *  # safe_search intelligent wrapper (Story 2.1)
+
+# Import evolvai MCP tool wrappers for auto-discovery by ToolRegistry
+from evolvai.tools.safe_exec_tool import SafeExecTool  # noqa: F401
+from evolvai.tools.batch_edit_tool import BatchEditTool  # noqa: F401
