@@ -11,7 +11,6 @@ Dimension 3: 验证工具 docstring 完整且对 LLM 友好
 - Docstring 包含 Args/Returns/Examples
 - 参数说明完整
 """
-import pytest
 
 
 class TestBatchEditParameterSchema:
@@ -29,6 +28,7 @@ class TestBatchEditParameterSchema:
         Then pattern and replacement are required str parameters
         """
         import inspect
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Get apply method signature
@@ -64,6 +64,7 @@ class TestBatchEditParameterSchema:
         Then scope defaults to "**/*" and preview defaults to False
         """
         import inspect
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Get apply method signature
@@ -100,8 +101,9 @@ class TestBatchEditParameterSchema:
         """
         import inspect
         from typing import get_args, get_origin
-        from evolvai.tools.batch_edit_tool import BatchEditTool
+
         from evolvai.core.execution_plan import ExecutionPlan
+        from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Get apply method signature
         sig = inspect.signature(BatchEditTool.apply)
@@ -125,7 +127,7 @@ class TestBatchEditParameterSchema:
             assert ExecutionPlan in args, \
                 f"ExecutionPlan not found in type annotation {annotation}"
             assert type(None) in args, \
-                f"None not found in type annotation (should be Optional)"
+                "None not found in type annotation (should be Optional)"
         else:
             # If no origin, might be just ExecutionPlan (which is also valid)
             assert annotation == ExecutionPlan, \
@@ -148,6 +150,7 @@ class TestSafeSearchParameterSchema:
         Then query is required str parameter
         """
         import inspect
+
         from serena.tools.safe_search_tool import SafeSearchTool
 
         # Get apply method signature
@@ -175,6 +178,7 @@ class TestSafeSearchParameterSchema:
         Then default value is "auto"
         """
         import inspect
+
         from serena.tools.safe_search_tool import SafeSearchTool
 
         # Get apply method signature
@@ -202,6 +206,7 @@ class TestSafeSearchParameterSchema:
         Then default value is "balanced"
         """
         import inspect
+
         from serena.tools.safe_search_tool import SafeSearchTool
 
         # Get apply method signature

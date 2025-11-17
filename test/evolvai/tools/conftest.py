@@ -4,9 +4,9 @@ MCP Tools Testing - Shared Fixtures
 Provides common fixtures for MCP tool testing to ensure test isolation
 and reduce code duplication.
 """
-import pytest
-from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
 
 
 @pytest.fixture
@@ -22,6 +22,7 @@ def mock_agent(tmp_path):
         def test_something(mock_agent):
             tool = BatchEditTool(mock_agent)
             # mock_agent.get_project_root() returns isolated tmp directory
+
     """
     agent = Mock()
     agent.get_project_root.return_value = str(tmp_path)
@@ -48,6 +49,7 @@ def simple_project(tmp_path):
             # simple_project already has 3 .py files
             tool = BatchEditTool(mock_agent)
             result = tool.apply(pattern="old_value", replacement="new_value")
+
     """
     (tmp_path / "file1.py").write_text("old_value = 1")
     (tmp_path / "file2.py").write_text("old_value = 2")
@@ -76,6 +78,7 @@ def go_project(tmp_path):
             # go_project has Go files for area detection
             tool = SafeSearchTool(mock_agent)
             result = tool.apply(query="func main")
+
     """
     (tmp_path / "main.go").write_text("package main\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n")
     (tmp_path / "handler.go").write_text("package main\n\nfunc handleRequest() {\n\t// handler\n}\n")

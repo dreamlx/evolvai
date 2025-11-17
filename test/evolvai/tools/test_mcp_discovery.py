@@ -8,7 +8,6 @@ Dimension 1: 验证 MCP 工具能被 ToolRegistry 正确发现和注册
 - 工具名称正确映射（batch_edit, safe_search, etc）
 - 工具类可通过名称获取
 """
-import pytest
 
 
 class TestMCPToolDiscovery:
@@ -26,7 +25,6 @@ class TestMCPToolDiscovery:
         Then batch_edit, safe_search, get_language_hint in tool names
         """
         from serena.tools.tools_base import ToolRegistry
-        import serena.tools  # Trigger auto-import of evolvai tools
 
         tr = ToolRegistry()
         tool_names = tr.get_tool_names()
@@ -49,7 +47,6 @@ class TestMCPToolDiscovery:
         Then tool count >= 49 (baseline + evolvai tools)
         """
         from serena.tools.tools_base import ToolRegistry
-        import serena.tools
 
         tr = ToolRegistry()
         tool_names = tr.get_tool_names()
@@ -70,7 +67,6 @@ class TestMCPToolDiscovery:
         Then returns BatchEditTool class
         """
         from serena.tools.tools_base import ToolRegistry
-        import serena.tools
 
         tr = ToolRegistry()
 

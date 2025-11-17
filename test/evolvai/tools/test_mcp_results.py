@@ -29,6 +29,7 @@ class TestBatchEditJSONResults:
         Then result is valid JSON with success, affected_files, unified_diff
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
@@ -75,6 +76,7 @@ class TestBatchEditJSONResults:
         Then result includes rollback_id field
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
@@ -117,6 +119,7 @@ class TestBatchEditJSONResults:
         Then unified_diff contains "---" and "+++" markers
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
@@ -204,6 +207,7 @@ class TestBatchEditErrorHandling:
         Then success=False and error_message mentions regex
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
@@ -246,13 +250,14 @@ class TestBatchEditErrorHandling:
         Then success=False and error_message mentions max_files
         """
         import json
-        from evolvai.tools.batch_edit_tool import BatchEditTool
+
         from evolvai.core.execution_plan import (
+            ExecutionLimits,
             ExecutionPlan,
             RollbackStrategy,
             RollbackStrategyType,
-            ExecutionLimits,
         )
+        from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Create 5 files to trigger max_files constraint
         for i in range(4, 6):
@@ -304,6 +309,7 @@ class TestBatchEditErrorHandling:
         Then result["success"] == False
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path

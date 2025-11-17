@@ -8,8 +8,7 @@ Dimension 6: 验证 ExecutionPlan 约束在 MCP 层正确传递和执行
 - 约束验证在核心层执行
 - 违规时返回明确错误
 """
-import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 
 class TestBatchEditExecutionPlan:
@@ -26,15 +25,13 @@ class TestBatchEditExecutionPlan:
         When tool.apply(execution_plan=plan)
         Then BatchEditor.batch_edit called with execution_plan=plan
         """
-        import json
-        from unittest.mock import patch
-        from evolvai.tools.batch_edit_tool import BatchEditTool
         from evolvai.core.execution_plan import (
+            ExecutionLimits,
             ExecutionPlan,
             RollbackStrategy,
             RollbackStrategyType,
-            ExecutionLimits,
         )
+        from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
         mock_agent.get_project_root.return_value = str(simple_project)
@@ -92,13 +89,14 @@ class TestBatchEditExecutionPlan:
         Then constraint violation error returned
         """
         import json
-        from evolvai.tools.batch_edit_tool import BatchEditTool
+
         from evolvai.core.execution_plan import (
+            ExecutionLimits,
             ExecutionPlan,
             RollbackStrategy,
             RollbackStrategyType,
-            ExecutionLimits,
         )
+        from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Create 5 files total (3 from simple_project + 2 more)
         for i in range(4, 6):
@@ -148,13 +146,14 @@ class TestBatchEditExecutionPlan:
         Then constraint violation error returned
         """
         import json
-        from evolvai.tools.batch_edit_tool import BatchEditTool
+
         from evolvai.core.execution_plan import (
+            ExecutionLimits,
             ExecutionPlan,
             RollbackStrategy,
             RollbackStrategyType,
-            ExecutionLimits,
         )
+        from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Create a file with 5 occurrences of the pattern
         test_file = simple_project / "many_matches.py"
@@ -209,6 +208,7 @@ old_value = 5
         Then operation succeeds normally
         """
         import json
+
         from evolvai.tools.batch_edit_tool import BatchEditTool
 
         # Update mock_agent to return simple_project path
