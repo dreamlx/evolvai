@@ -3,8 +3,6 @@
 专注核心功能：原子性写入 + 自动回滚安全网
 """
 
-import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 from evolvai.area_detection.edit_wrapper import SafeEditWrapper

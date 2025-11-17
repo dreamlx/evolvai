@@ -1017,9 +1017,10 @@ class TestSafeExecStory24Day3MCPIntegration:
         And includes confirmation_message
         And includes risk_level
         """
-        from unittest.mock import MagicMock
-        from evolvai.tools.safe_exec_tool import SafeExecTool
         import json
+        from unittest.mock import MagicMock
+
+        from evolvai.tools.safe_exec_tool import SafeExecTool
 
         # Create mock agent
         mock_agent = MagicMock()
@@ -1057,9 +1058,10 @@ class TestSafeExecStory24Day3MCPIntegration:
         Then confirmation is skipped
         And command executes normally
         """
-        from unittest.mock import MagicMock
-        from evolvai.tools.safe_exec_tool import SafeExecTool
         import json
+        from unittest.mock import MagicMock
+
+        from evolvai.tools.safe_exec_tool import SafeExecTool
 
         # Create test file
         test_file = tmp_path / "tmp_test.txt"
@@ -1097,9 +1099,10 @@ class TestSafeExecStory24Day3MCPIntegration:
         When JSON response is generated
         Then includes confirmation_required, confirmation_message, risk_level
         """
-        from unittest.mock import MagicMock
-        from evolvai.tools.safe_exec_tool import SafeExecTool
         import json
+        from unittest.mock import MagicMock
+
+        from evolvai.tools.safe_exec_tool import SafeExecTool
 
         mock_agent = MagicMock()
         mock_agent.get_active_project_or_raise.return_value.root = str(tmp_path)

@@ -5,7 +5,6 @@ Story 2.2 - BatchEditor核心实现
 
 import difflib
 import re
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,6 +59,7 @@ class BatchEditor:
 
         Args:
             project_root: 项目根目录
+
         """
         self.project_root = Path(project_root)
         self.rollback_manager = RollbackManager()
@@ -83,6 +83,7 @@ class BatchEditor:
 
         Returns:
             BatchEditResult: 包含affected_files, changes_count, unified_diff等
+
         """
         start_time = time.time()
         result = BatchEditResult(success=False)
@@ -163,6 +164,7 @@ class BatchEditor:
 
         Returns:
             匹配的文件列表
+
         """
         files = list(self.project_root.glob(scope))
         # 仅返回文件，不包括目录
@@ -180,6 +182,7 @@ class BatchEditor:
 
         Returns:
             FileChange列表（仅包含有匹配的文件）
+
         """
         changes = []
         for file_path in files:
@@ -213,6 +216,7 @@ class BatchEditor:
 
         Returns:
             Unified diff字符串
+
         """
         diff_lines = []
         for change in changes:
@@ -243,6 +247,7 @@ class BatchEditor:
 
         Returns:
             错误信息（如果违反约束），否则None
+
         """
         # 检查max_files约束
         if len(changes) > plan.limits.max_files:
@@ -274,6 +279,7 @@ class BatchEditor:
 
         Raises:
             RuntimeError: 备份创建失败时抛出
+
         """
         for change in changes:
             result = self.rollback_manager.create_file_backup(str(change.file_path))
@@ -293,6 +299,7 @@ class BatchEditor:
 
         Raises:
             RuntimeError: 写入失败时抛出
+
         """
         try:
             for change in changes:
@@ -314,6 +321,7 @@ class BatchEditor:
         - 只恢复batch_edit修改的文件（不影响用户其他工作）
         - 使用精确的rollback_hash（不依赖smart_rollback猜测）
         - 逐个回滚，单个失败不影响其他文件
+
         """
         for change in changes:
             if not change.rollback_hash:

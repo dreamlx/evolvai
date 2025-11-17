@@ -3,10 +3,7 @@ Story 2.2 - BatchEditor TDD测试套件
 遵循TDD Red-Green-Refactor循环
 """
 
-import tempfile
 from pathlib import Path
-
-import pytest
 
 
 class TestBatchEditorCore:
@@ -253,7 +250,7 @@ class TestBatchEditorCore:
         DoD: F3 - Regex capture groups working
 
         Given files with pattern "function_name_v1"
-        When batch_edit(pattern=r"(\w+)_v1", replacement=r"\1_v2")
+        When batch_edit(pattern=r"(\\w+)_v1", replacement=r"\1_v2")
         Then capture groups preserved in replacement
         And files updated correctly
         """

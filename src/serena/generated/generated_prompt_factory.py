@@ -4,9 +4,10 @@
 
 # NOTE: This module is auto-generated from interprompt.autogenerate_prompt_factory_module, do not edit manually!
 
+from typing import Any
+
 from interprompt.multilang_prompt import PromptList
 from interprompt.prompt_factory import PromptFactoryBase
-from typing import Any
 
 
 class PromptFactory(PromptFactoryBase):

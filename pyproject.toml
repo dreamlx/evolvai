@@ -94,6 +94,15 @@ exclude = '''
 )/
 '''
 
+[tool.isort]
+profile = "black"
+line_length = 140
+src_paths = ["src", "test"]
+skip_glob = ["src/solidlsp/language_servers/*/static/*", "src/multilspy/*"]
+skip = ["src/serena/tools/__init__.py"]  # Has dependency-order constraints
+known_first_party = ["evolvai", "serena", "interprompt", "solidlsp"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
 [tool.doc8]
 max-line-length = 1000
 
@@ -302,6 +311,7 @@ check-hidden = true
 [dependency-groups]
 dev = [
     "black>=25.1.0",
+    "isort>=7.0.0",
     "mypy>=1.17.0",
     "poethepoet>=0.36.0",
     "pytest>=8.4.1",
