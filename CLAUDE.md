@@ -157,7 +157,7 @@ Memory Bank MCP uses these standard files:
 
 **Technical Foundation**: EvolvAI builds on Serena's LSP infrastructure (SolidLanguageServer, multi-language support, symbol operations) while adding the GoT engine and behavior constraint systems as new layers.
 
-For detailed project history and positioning, see: `.serena/memories/project-history-and-repositioning.md`
+For detailed project history and positioning, use Memory Bank MCP to read `productContext.md` and `systemPatterns.md`
 
 ## Development Commands
 
@@ -371,11 +371,17 @@ Each supported language (25+ languages including Python, TypeScript, Go, Rust, J
 
 ### Memory & Knowledge System
 
-- **Markdown-based storage** in `.serena/memories/` directories
-- **Project-specific knowledge** persistence across sessions
-- **Contextual retrieval** based on relevance
-- **Onboarding support** for new projects
-- **Indexing system** for faster symbol discovery in large codebases
+**Current System** (Memory Bank MCP + docs/):
+- **Memory Bank MCP** - Session context managed through standard MCP protocol
+  - Commands: "follow your custom instructions" (load), "update memory bank" (update)
+  - Files: projectbrief.md, productContext.md, systemPatterns.md, techContext.md, activeContext.md, progress.md, .clinerules
+- **docs/ directory** - Permanent knowledge under version control
+  - Architecture decisions, lessons learned, project specs
+- **Indexing system** - Faster symbol discovery in large codebases (via SerenaAgent)
+
+**Legacy System** (DEPRECATED):
+- `.serena/memories/` - Old Serena memory system, being phased out
+- Tools: `read_memory`, `write_memory`, `list_memories`, `edit_memory` - Do NOT use
 
 ### MCP Integration
 
