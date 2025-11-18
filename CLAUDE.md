@@ -28,6 +28,50 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 📚 Memory Bank Integration (TPST Optimization)
+
+**New Window Startup Protocol**:
+
+### Automatic Startup (Recommended)
+Run `/memory-bank-load` automatically when starting new window:
+
+```
+1. Pre-Flight Validation - Check Memory Bank status
+2. Smart Load (P0 files) - ~2.5K tokens
+   - projectbrief.md - Project positioning, Epics, TPST goals
+   - current-sprint.md - Current Story, Git status, active tasks
+3. Additional load as needed - P1 files (~+4K tokens)
+   - tech-context.md - Tech stack, commands, MCP config
+   - development-rules.md - TDD workflow, checkpoints, KISS
+```
+
+**Token Savings**: 16-23K → 4.5-7.5K (60-70% reduction) ✅
+
+### Memory Bank Files Priority
+
+**P0 (Always Load)**: Project brief, current sprint
+**P1 (Common Tasks)**: Tech context, development rules
+**P2 (Specific Needs)**: System patterns, quick notes
+
+### Task-Specific Loading
+
+- **new_session**: P0 only (~2.5K) - Just starting work
+- **feature_dev**: P0 + P1 (~6.5K) - Implementing features
+- **debug**: P0 + P1 (~6.5K) - Debugging issues
+- **architecture**: P0 + P1 + P2 (~9K) - Design work
+
+### Update Memory Bank
+
+Run `/memory-bank-update` when:
+- Completing Story/Task
+- Making important decisions
+- Changing project focus
+- Before ending work session
+
+**Detailed Information**: Use Memory Bank MCP to read specific files as needed instead of loading all content from CLAUDE.md.
+
+---
+
 ## Project Overview
 
 **EvolvAI** is an AI behavior engineering platform that optimizes AI assistant efficiency through systematic behavior constraints and thinking optimization.
@@ -77,6 +121,77 @@ Available pytest markers for selective testing:
 - `uv run index-project` - Index project for faster tool performance
 
 **Always run format, type-check, and test before completing any task.**
+
+## 🔧 MCP Servers Configuration
+
+This project has two MCP servers configured, each serving different purposes:
+
+### Current Usage Strategy
+
+**Primary: Serena MCP**
+- Mature and stable LSP-based tools
+- Symbol-level code operations (`find_symbol`, `replace_symbol_body`, `rename_symbol`)
+- Project memory access (`read_memory`, `write_memory`, `list_memories`)
+- Semantic search and navigation
+
+**Supplementary: EvolvAI MCP**
+- Behavior constraint tools (Epic-001, under development)
+- Batch editing with validation (`batch_edit`)
+- Safe command execution with timeout (`safe_exec`)
+- Constrained search results (`safe_search`)
+
+### Memory System Access
+
+Both MCP servers can access project memories stored in `.serena/memories/`:
+
+**Common Memory Tools**:
+- `read_memory` - Read project knowledge and documentation
+- `write_memory` - Record new insights and decisions
+- `list_memories` - List all available memory files
+- `edit_memory` - Update existing memory content
+
+**Available Memories**:
+Use `list_memories` to see current project memories, which include:
+- Architecture decisions and design rationale
+- Development lessons learned
+- Project history and repositioning
+- Task management status and workflows
+
+### EvolvAI Dogfooding Guidelines
+
+When developing EvolvAI features, **prioritize EvolvAI MCP tools** to:
+1. **Validate tool efficiency**: Use `batch_edit`, `safe_exec`, `safe_search` in real development
+2. **Collect TPST data**: Track token usage and execution performance
+3. **Test behavior constraints**: Verify ExecutionPlan validation works correctly
+4. **Identify improvements**: Document pain points and optimization opportunities
+
+**Dogfooding Tools**:
+- `batch_edit` - Regex-based batch file editing with preview
+- `safe_exec` - Command execution with timeout and output limits
+- `safe_search` - Pattern search with result constraints
+- `propose_edit` + `apply_edit` - Two-phase editing workflow
+
+**Goal**: Use EvolvAI to improve EvolvAI itself, demonstrating TPST reduction in practice.
+
+### Tool Selection Quick Reference
+
+| Task Type | Recommended MCP | Tool |
+|-----------|----------------|------|
+| Read project memory | Serena | `read_memory` |
+| Symbol-level editing | Serena | `replace_symbol_body`, `insert_after_symbol` |
+| Batch text replacement | EvolvAI | `batch_edit` |
+| Run tests safely | EvolvAI | `safe_exec` |
+| Search with limits | EvolvAI | `safe_search` |
+| Code refactoring | Serena | `rename_symbol`, LSP tools |
+| Learn coding patterns | EvolvAI | `analyze_coding_standards` |
+
+### Future Evolution
+
+Once Epic-001 is complete and validated:
+- **Primary**: EvolvAI MCP (higher efficiency, validated constraints)
+- **Fallback**: Serena MCP (stability backup)
+
+Current status: Epic-001 Phase 1-2 in development (Story 2.2+)
 
 ## Architecture Overview
 
