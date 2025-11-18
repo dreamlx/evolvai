@@ -46,13 +46,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **🚀 AUTOMATIC TRIGGERS - You MUST follow these**:
 
-### 1. New Window Startup (AUTOMATIC)
-**TRIGGER**: When you (Claude) start in a new conversation window
-**ACTION**: Ask Memory Bank MCP to "follow your custom instructions"
+### 1. New Window Startup / Context Reset (AUTOMATIC)
+**TRIGGER**:
+- When you (Claude) start in a new conversation window
+- After automatic context compression/truncation by Claude
+**ACTION**: Ask Memory Bank MCP to "validate memory bank"
 
 **Standard Protocol**:
 ```
-Simply say: "Please follow your custom instructions for the 'serena' project."
+Simply say: "Please validate memory bank for the 'serena' project."
 
 Memory Bank MCP will automatically:
 1. Pre-Flight Validation (check required files exist)
@@ -72,16 +74,27 @@ Memory Bank MCP will automatically:
 
 **UI Convenience**: `/memory-bank-load` slash command triggers this flow
 
-### 2. Task Completion (AUTOMATIC)
-**TRIGGER**: After completing significant work (git commit, Story completion)
+### 2. Git Commit (AUTOMATIC)
+**TRIGGER**: After every `git commit` command succeeds
 **ACTION**: Ask Memory Bank MCP to "update memory bank"
 
-**When to trigger**:
-- ✅ After successful `git commit` (significant changes)
+**Standard Protocol**:
+```
+After git commit succeeds, immediately:
+Say: "Please update the memory bank for the 'serena' project."
+
+Provide context:
+- Completed: [what was committed]
+- Git status: [branch, commit message]
+```
+
+### 3. Manual Updates (ON DEMAND)
+**TRIGGER**:
 - ✅ After completing a Story/Task
 - ✅ Before ending work session (user says "done" / "finished")
 - ✅ After making important architectural decisions
 - ✅ When project focus changes
+- ✅ When user explicitly requests
 
 **Standard Protocol**:
 ```

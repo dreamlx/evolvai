@@ -56,7 +56,9 @@ graph TB
 ### 1️⃣ 新会话启动流程
 
 ```yaml
-触发: 新的 Claude 窗口/会话开始
+触发:
+  - 新的 Claude 窗口/会话开始
+  - Claude 自动上下文压缩/截断后
 
 步骤:
   1. AI 自动执行:
@@ -95,14 +97,33 @@ graph TB
   - 需要当前状态 → 已在 activeContext.md（Memory Bank）
 ```
 
-### 3️⃣ 任务完成后的更新流程
+### 3️⃣ Git Commit 后的自动更新流程
+
+```yaml
+触发: 每次 git commit 成功后（自动）
+
+步骤:
+  1. AI 立即执行:
+     命令: "Please update memory bank for the 'serena' project."
+     上下文: "Completed: [commit内容], Git: [branch, commit message]"
+
+  2. Memory Bank MCP 智能更新:
+     - 分析 commit 内容
+     - 更新 progress.md
+     - 更新 activeContext.md（如需要）
+     - 识别新模式 → 更新 .clinerules
+
+结果: 自动保持 Memory Bank 与代码同步
+```
+
+### 4️⃣ 手动更新流程
 
 ```yaml
 触发:
-  - 完成 Story/Task
-  - 重要 git commit
+  - 完成 Story/Task（无 git commit）
   - 架构决策
-  - 发现新模式
+  - 用户说 "done" 或 "finished"
+  - 用户明确要求更新
 
 步骤:
   1. AI 执行:
@@ -126,7 +147,7 @@ graph TB
 结果: 下次会话获得最新上下文
 ```
 
-### 4️⃣ 永久知识管理流程
+### 5️⃣ 永久知识管理流程
 
 ```yaml
 触发: 产生了长期价值的知识
@@ -223,21 +244,24 @@ EvolvAI MCP:
 
 ```yaml
 自动加载（validate memory bank）:
-  - 新会话窗口 ✅
-  - 切换项目 ✅
-  - 长时间中断后 ✅
+  - 新会话窗口 ✅ [自动]
+  - 上下文压缩后 ✅ [自动]
+  - 切换项目 ✅ [手动]
+  - 长时间中断后 ✅ [手动]
 
 自动更新（update memory bank）:
-  - Story/Task 完成 ✅
-  - 重要 git commit ✅
-  - 架构决策 ✅
-  - 用户说 "done" ✅
+  - 每次 git commit 成功 ✅ [自动]
 
-不要更新:
-  - 临时实验 ❌
-  - 小改动 ❌
-  - 探索性工作 ❌
-  - 每个 commit ❌
+手动更新（update memory bank）:
+  - Story/Task 完成 ✅ [手动]
+  - 架构决策 ✅ [手动]
+  - 用户说 "done" ✅ [手动]
+  - 用户明确要求 ✅ [手动]
+
+注意事项:
+  - Git commit 后自动更新，无需手动
+  - 临时实验不要 commit，就不会触发更新
+  - 探索性工作使用临时分支
 ```
 
 ---
