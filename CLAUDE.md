@@ -30,95 +30,100 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📚 Memory Bank Integration (TPST Optimization)
 
+**Memory Bank MCP** is a development tool (like Git) that manages session context for this project. It follows standard MCP protocol - no custom agents or TPST tracking needed.
+
 **🚀 AUTOMATIC TRIGGERS - You MUST follow these**:
 
 ### 1. New Window Startup (AUTOMATIC)
 **TRIGGER**: When you (Claude) start in a new conversation window
-**ACTION**: Automatically execute `/memory-bank-load` with task type detection
+**ACTION**: Ask Memory Bank MCP to "follow your custom instructions"
 
-**Protocol**:
+**Standard Protocol**:
 ```
-1. Detect task type from user's first message:
-   - "fix bug" / "debug" → TaskType.DEBUG
-   - "implement feature" / "add" → TaskType.FEATURE_DEV
-   - "refactor" / "clean up" → TaskType.REFACTOR
-   - "design" / "architecture" → TaskType.ARCHITECTURE
-   - Default / unclear → TaskType.NEW_SESSION
+Simply say: "Please follow your custom instructions for the 'serena' project."
 
-2. Run Memory Bank load:
-   - Pre-Flight Validation
-   - Smart Load based on task type
-   - Display brief summary to user
-
-3. Load results:
-   - NEW_SESSION: P0 only (~2.5K tokens)
-   - FEATURE_DEV/DEBUG: P0 + P1 (~7K tokens)
-   - ARCHITECTURE: P0 + P1 + P2 (~10K tokens)
+Memory Bank MCP will automatically:
+1. Pre-Flight Validation (check required files exist)
+2. Hierarchical file loading:
+   - projectbrief.md (project overview)
+   - productContext.md (problem/solution context)
+   - systemPatterns.md (architecture patterns, ADRs)
+   - techContext.md (tech stack, commands)
+   - activeContext.md (current focus, recent decisions)
+   - progress.md (development status, roadmap)
+   - .clinerules (project-specific behavioral rules)
+3. Apply .clinerules adjustments
+4. Return full context
 ```
 
-**Token Savings**: 16-23K → 2.5-10K (50-88% reduction) ✅
+**Token Savings**: 16-23K → ~4.5K (70% reduction) ✅
 
-**Example**:
-```
-User: "Help me fix the batch_edit bug"
-Claude: [Automatically runs /memory-bank-load with TaskType.DEBUG]
-        "Loading project context for debugging task...
-         ✅ Loaded 4 files (~7K tokens)
-         Ready to help with batch_edit debugging."
-```
+**UI Convenience**: `/memory-bank-load` slash command triggers this flow
 
 ### 2. Task Completion (AUTOMATIC)
 **TRIGGER**: After completing significant work (git commit, Story completion)
-**ACTION**: Automatically execute `/memory-bank-update`
+**ACTION**: Ask Memory Bank MCP to "update memory bank"
 
 **When to trigger**:
-- ✅ After successful `git commit`
+- ✅ After successful `git commit` (significant changes)
 - ✅ After completing a Story/Task
 - ✅ Before ending work session (user says "done" / "finished")
-- ✅ After making important decisions
-- ✅ User explicitly requests update
+- ✅ After making important architectural decisions
+- ✅ When project focus changes
 
-**Protocol**:
+**Standard Protocol**:
 ```
-1. Detect completion signal:
-   - Git commit executed → Auto-update
-   - Task marked complete → Auto-update
-   - User says "done/finished" → Ask if update needed
+Say: "Please update the memory bank for the 'serena' project."
 
-2. Gather current state:
-   - Git status (branch, latest commit)
-   - Current todos
-   - Recent decisions
+Provide context:
+- Completed: [Story X.X, task description]
+- New decisions: [List key decisions]
+- Git status: [branch, recent commits]
 
-3. Update Memory Bank:
-   - Always update: current-sprint.md
-   - Conditionally update other files
-   - Report what was updated
-
-4. Confirm to user:
-   "✅ Memory Bank updated (current-sprint.md)"
+Memory Bank MCP will automatically:
+1. Analyze current state (Git, todos, conversation)
+2. Update progress.md (always)
+3. Update activeContext.md (if focus changed)
+4. Update .clinerules (if new patterns discovered)
+5. Update other files as needed
+6. Report what was updated
 ```
 
-### Memory Bank Files Priority
+**UI Convenience**: `/memory-bank-update` slash command triggers this flow
 
-**P0 (Always Load)**: Project brief, current sprint
-**P1 (Common Tasks)**: Tech context, development rules
-**P2 (Specific Needs)**: System patterns, quick notes
+### Standard Memory Bank Files (camelCase naming)
 
-### Task-Specific Loading
+Memory Bank MCP uses these standard files:
+- **projectbrief.md** - Project overview and goals (static)
+- **productContext.md** - Problem/solution context (rare updates)
+- **systemPatterns.md** - Architecture patterns, ADRs (rare updates)
+- **techContext.md** - Tech stack, commands (rare updates)
+- **activeContext.md** - Current focus, recent decisions (frequent updates)
+- **progress.md** - Development status, roadmap (frequent updates)
+- **.clinerules** - Project-specific behavioral rules (updates as patterns discovered)
 
-- **new_session**: P0 only (~2.5K) - Just starting work
-- **feature_dev**: P0 + P1 (~6.5K) - Implementing features
-- **debug**: P0 + P1 (~6.5K) - Debugging issues
-- **architecture**: P0 + P1 + P2 (~9K) - Design work
+### Memory Bank as Development Tool
 
-### Update Memory Bank
+**Important Distinctions**:
+- Memory Bank MCP = Development tool (like Git)
+- No TPST tracking of Memory Bank itself
+- Future EvolvAI internal memo = Product feature (Epic-002/003) for tracking AI execution and user habits
+- Current goal: Use Memory Bank MCP correctly for session context
 
-Run `/memory-bank-update` when:
+### Update Triggers
+
+**DO update** when:
 - Completing Story/Task
 - Making important decisions
 - Changing project focus
 - Before ending work session
+- After significant git commits
+
+**DO NOT update** during:
+- Minor code changes
+- Exploratory work
+- Temporary experiments
+- Every single git commit
 
 **Detailed Information**: Use Memory Bank MCP to read specific files as needed instead of loading all content from CLAUDE.md.
 
@@ -176,17 +181,23 @@ Available pytest markers for selective testing:
 
 ## 🔧 MCP Servers Configuration
 
-This project has two MCP servers configured, each serving different purposes:
+This project has three MCP servers configured, each serving different purposes:
 
 ### Current Usage Strategy
 
-**Primary: Serena MCP**
+**Memory Bank MCP** (Development Tool)
+- Session context management (like Git for context)
+- Standard protocol: "follow your custom instructions" / "update memory bank"
+- No custom agents or TPST tracking needed
+- Slash commands: `/memory-bank-load`, `/memory-bank-update`
+
+**Serena MCP** (Primary Codebase Operations)
 - Mature and stable LSP-based tools
 - Symbol-level code operations (`find_symbol`, `replace_symbol_body`, `rename_symbol`)
 - Semantic search and navigation
 - **Legacy memory** (`.serena/memories/`) - ⚠️ DEPRECATED, use Memory Bank instead
 
-**Supplementary: EvolvAI MCP**
+**EvolvAI MCP** (Behavior Constraints - Under Development)
 - Behavior constraint tools (Epic-001, under development)
 - Batch editing with validation (`batch_edit`)
 - Safe command execution with timeout (`safe_exec`)
@@ -233,7 +244,8 @@ When developing EvolvAI features, **prioritize EvolvAI MCP tools** to:
 
 | Task Type | Recommended MCP | Tool |
 |-----------|----------------|------|
-| Read project memory | Serena | `read_memory` |
+| Load project context | Memory Bank | "follow your custom instructions" |
+| Update project state | Memory Bank | "update memory bank" |
 | Symbol-level editing | Serena | `replace_symbol_body`, `insert_after_symbol` |
 | Batch text replacement | EvolvAI | `batch_edit` |
 | Run tests safely | EvolvAI | `safe_exec` |
