@@ -36,11 +36,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 1. New Window Startup (AUTOMATIC)
 **TRIGGER**: When you (Claude) start in a new conversation window
-**ACTION**: Ask Memory Bank MCP to "follow your custom instructions"
+**ACTION**: Ask Memory Bank MCP to "validate memory bank"
 
 **Standard Protocol**:
 ```
-Simply say: "Please follow your custom instructions for the 'serena' project."
+Simply say: "Please validate memory bank for the 'serena' project."
 
 Memory Bank MCP will automatically:
 1. Pre-Flight Validation (check required files exist)
