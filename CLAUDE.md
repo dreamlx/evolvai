@@ -30,22 +30,74 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📚 Memory Bank Integration (TPST Optimization)
 
-**New Window Startup Protocol**:
+**🚀 AUTOMATIC TRIGGERS - You MUST follow these**:
 
-### Automatic Startup (Recommended)
-Run `/memory-bank-load` automatically when starting new window:
+### 1. New Window Startup (AUTOMATIC)
+**TRIGGER**: When you (Claude) start in a new conversation window
+**ACTION**: Automatically execute `/memory-bank-load` with task type detection
 
+**Protocol**:
 ```
-1. Pre-Flight Validation - Check Memory Bank status
-2. Smart Load (P0 files) - ~2.5K tokens
-   - projectbrief.md - Project positioning, Epics, TPST goals
-   - current-sprint.md - Current Story, Git status, active tasks
-3. Additional load as needed - P1 files (~+4K tokens)
-   - tech-context.md - Tech stack, commands, MCP config
-   - development-rules.md - TDD workflow, checkpoints, KISS
+1. Detect task type from user's first message:
+   - "fix bug" / "debug" → TaskType.DEBUG
+   - "implement feature" / "add" → TaskType.FEATURE_DEV
+   - "refactor" / "clean up" → TaskType.REFACTOR
+   - "design" / "architecture" → TaskType.ARCHITECTURE
+   - Default / unclear → TaskType.NEW_SESSION
+
+2. Run Memory Bank load:
+   - Pre-Flight Validation
+   - Smart Load based on task type
+   - Display brief summary to user
+
+3. Load results:
+   - NEW_SESSION: P0 only (~2.5K tokens)
+   - FEATURE_DEV/DEBUG: P0 + P1 (~7K tokens)
+   - ARCHITECTURE: P0 + P1 + P2 (~10K tokens)
 ```
 
-**Token Savings**: 16-23K → 4.5-7.5K (60-70% reduction) ✅
+**Token Savings**: 16-23K → 2.5-10K (50-88% reduction) ✅
+
+**Example**:
+```
+User: "Help me fix the batch_edit bug"
+Claude: [Automatically runs /memory-bank-load with TaskType.DEBUG]
+        "Loading project context for debugging task...
+         ✅ Loaded 4 files (~7K tokens)
+         Ready to help with batch_edit debugging."
+```
+
+### 2. Task Completion (AUTOMATIC)
+**TRIGGER**: After completing significant work (git commit, Story completion)
+**ACTION**: Automatically execute `/memory-bank-update`
+
+**When to trigger**:
+- ✅ After successful `git commit`
+- ✅ After completing a Story/Task
+- ✅ Before ending work session (user says "done" / "finished")
+- ✅ After making important decisions
+- ✅ User explicitly requests update
+
+**Protocol**:
+```
+1. Detect completion signal:
+   - Git commit executed → Auto-update
+   - Task marked complete → Auto-update
+   - User says "done/finished" → Ask if update needed
+
+2. Gather current state:
+   - Git status (branch, latest commit)
+   - Current todos
+   - Recent decisions
+
+3. Update Memory Bank:
+   - Always update: current-sprint.md
+   - Conditionally update other files
+   - Report what was updated
+
+4. Confirm to user:
+   "✅ Memory Bank updated (current-sprint.md)"
+```
 
 ### Memory Bank Files Priority
 
@@ -131,8 +183,8 @@ This project has two MCP servers configured, each serving different purposes:
 **Primary: Serena MCP**
 - Mature and stable LSP-based tools
 - Symbol-level code operations (`find_symbol`, `replace_symbol_body`, `rename_symbol`)
-- Project memory access (`read_memory`, `write_memory`, `list_memories`)
 - Semantic search and navigation
+- **Legacy memory** (`.serena/memories/`) - ⚠️ DEPRECATED, use Memory Bank instead
 
 **Supplementary: EvolvAI MCP**
 - Behavior constraint tools (Epic-001, under development)
@@ -140,22 +192,26 @@ This project has two MCP servers configured, each serving different purposes:
 - Safe command execution with timeout (`safe_exec`)
 - Constrained search results (`safe_search`)
 
-### Memory System Access
+### Memory and Documentation Strategy
 
-Both MCP servers can access project memories stored in `.serena/memories/`:
+**✅ RECOMMENDED - Use Memory Bank MCP + docs/**:
+- **Memory Bank MCP** - Session context, current work state (按需加载)
+  - Use `/memory-bank-load` for project context
+  - Use `/memory-bank-update` to update current state
+- **docs/** directory - Permanent knowledge, version-controlled
+  - Architecture decisions → `docs/development/architecture/adrs/`
+  - Lessons learned → `docs/knowledge/lessons/`
+  - Project specs → `docs/product/`
 
-**Common Memory Tools**:
-- `read_memory` - Read project knowledge and documentation
-- `write_memory` - Record new insights and decisions
-- `list_memories` - List all available memory files
-- `edit_memory` - Update existing memory content
+**❌ DEPRECATED - Serena memory tools**:
+- `.serena/memories/` is being phased out
+- Old tools: `read_memory`, `write_memory`, `list_memories`, `edit_memory`
+- Reason: Not optimized for TPST, replaced by Memory Bank + docs strategy
 
-**Available Memories**:
-Use `list_memories` to see current project memories, which include:
-- Architecture decisions and design rationale
-- Development lessons learned
-- Project history and repositioning
-- Task management status and workflows
+**Migration Status**:
+- Memory Bank integration: ✅ Complete (Phase 1)
+- Core content migrated to Memory Bank
+- Permanent knowledge should be in `docs/` for version control
 
 ### EvolvAI Dogfooding Guidelines
 
