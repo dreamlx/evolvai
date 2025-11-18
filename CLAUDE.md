@@ -28,9 +28,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
-## 📚 Memory Bank Integration (TPST Optimization)
+## 📚 Memory Bank Integration (Development Tool)
 
-**Memory Bank MCP** is a development tool (like Git) that manages session context for this project. It follows standard MCP protocol - no custom agents or TPST tracking needed.
+**⚠️ IMPORTANT**: Memory Bank MCP is an **EXTERNAL development tool** for managing project context during development. It is **NOT** a feature to be integrated into EvolvAI.
+
+**What Memory Bank MCP is**:
+- ✅ External MCP service (like Git, Docker, or npm)
+- ✅ Development-time tool for AI session context
+- ✅ Replacement for reading lengthy CLAUDE.md and docs/ on every session
+- ✅ Already optimized - no TPST tracking needed for Memory Bank itself
+
+**What Memory Bank MCP is NOT**:
+- ❌ NOT an EvolvAI product feature
+- ❌ NOT to be integrated into our codebase
+- ❌ NOT something we optimize (it's already optimized)
+- ❌ NOT part of our TPST metrics (measure EvolvAI tools instead)
 
 **🚀 AUTOMATIC TRIGGERS - You MUST follow these**:
 
