@@ -203,11 +203,12 @@ This project has three MCP servers configured, each serving different purposes:
 - No custom agents or TPST tracking needed
 - Slash commands: `/memory-bank-load`, `/memory-bank-update`
 
-**Serena MCP** (Primary Codebase Operations)
-- Mature and stable LSP-based tools
+**Serena MCP** (Codebase Operations - Being Phased Out)
+- Mature LSP-based tools (will be integrated into EvolvAI)
 - Symbol-level code operations (`find_symbol`, `replace_symbol_body`, `rename_symbol`)
 - Semantic search and navigation
-- **Legacy memory** (`.serena/memories/`) - ⚠️ DEPRECATED, use Memory Bank instead
+- **Memory system** - ❌ DEPRECATED by upstream, replaced by Memory Bank MCP
+- **Note**: Serena upstream has shifted focus, we're evolving to EvolvAI MCP
 
 **EvolvAI MCP** (Behavior Constraints - Under Development)
 - Behavior constraint tools (Epic-001, under development)
@@ -227,9 +228,10 @@ This project has three MCP servers configured, each serving different purposes:
   - Project specs → `docs/product/`
 
 **❌ DEPRECATED - Serena memory tools**:
-- `.serena/memories/` is being phased out
-- Old tools: `read_memory`, `write_memory`, `list_memories`, `edit_memory`
-- Reason: Not optimized for TPST, replaced by Memory Bank + docs strategy
+- `.serena/memories/` - **Deprecated by upstream Serena project**
+- Old tools: `read_memory`, `write_memory`, `list_memories`, `edit_memory` - DO NOT USE
+- Replacement: Memory Bank MCP (dev time) + docs/ (permanent) + future EvolvAI memo (runtime)
+- Reason: Upstream Serena shifted focus, no longer maintains memory system
 
 **Migration Status**:
 - Memory Bank integration: ✅ Complete (Phase 1)
@@ -265,13 +267,18 @@ When developing EvolvAI features, **prioritize EvolvAI MCP tools** to:
 | Code refactoring | Serena | `rename_symbol`, LSP tools |
 | Learn coding patterns | EvolvAI | `analyze_coding_standards` |
 
-### Future Evolution
+### Evolution Roadmap
 
-Once Epic-001 is complete and validated:
-- **Primary**: EvolvAI MCP (higher efficiency, validated constraints)
-- **Fallback**: Serena MCP (stability backup)
+**Current State**: Dual MCP operation
+- Serena MCP for LSP operations (being phased out)
+- EvolvAI MCP for constrained operations (actively developing)
 
-Current status: Epic-001 Phase 1-2 in development (Story 2.2+)
+**Target State**: EvolvAI MCP replaces Serena completely
+- Stage 1 (NOW): Dual operation, Epic-001 development
+- Stage 2 (Q2 2025): Feature migration, Epic-002/003
+- Stage 3 (Q3 2025): Full replacement, Serena retired
+
+See: `docs/development/architecture/evolution-roadmap.md` for details
 
 ## Architecture Overview
 
