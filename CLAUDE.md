@@ -74,18 +74,26 @@ Memory Bank MCP will automatically:
 
 **UI Convenience**: `/memory-bank-load` slash command triggers this flow
 
-### 2. Git Commit (AUTOMATIC)
-**TRIGGER**: After every `git commit` command succeeds
-**ACTION**: Ask Memory Bank MCP to "update memory bank"
+### 2. Smart Git Commit Updates (CONDITIONAL)
+**TRIGGER**: After git commit - but ONLY when significant:
+- ✅ Merge commits (`Merge branch 'feature/*'`)
+- ✅ Large changes (10+ files modified)
+- ✅ Story/Task completion (commit message contains "Story X.X complete")
+- ❌ Skip small commits (formatting, single test, minor fixes)
 
-**Standard Protocol**:
+**ACTION**: Ask Memory Bank MCP to "update memory bank" only for significant changes
+
+**Smart Protocol**:
 ```
-After git commit succeeds, immediately:
-Say: "Please update the memory bank for the 'serena' project."
+After git commit, evaluate:
+1. Is this a merge? → Update
+2. Changed 10+ files? → Update
+3. Story complete? → Update
+4. Otherwise → Delay/batch update
 
-Provide context:
-- Completed: [what was committed]
-- Git status: [branch, commit message]
+When updating:
+Say: "Please update the memory bank for the 'serena' project."
+Context: [significant change description]
 ```
 
 ### 3. Manual Updates (ON DEMAND)
@@ -126,6 +134,22 @@ Memory Bank MCP uses these standard files:
 - **activeContext.md** - Current focus, recent decisions (frequent updates)
 - **progress.md** - Development status, roadmap (frequent updates)
 - **.clinerules** - Project-specific behavioral rules (updates as patterns discovered)
+
+### .clinerules Execution (MANDATORY)
+
+**After loading Memory Bank, ALWAYS declare and follow**:
+```
+"I have loaded .clinerules and will strictly follow:
+1. TDD: Always check Story TDD Plan before code
+2. Tools: Use safe_* tools over raw commands
+3. Git: Follow feature→develop→main flow
+4. [Other project-specific rules...]"
+```
+
+**During work, self-check at key points**:
+- Before writing code: "Did I check the Story TDD Plan?"
+- Before using tools: "Should I use safe_* version?"
+- Before commit: "Did I run tests?"
 
 ### Memory Bank as Development Tool
 
