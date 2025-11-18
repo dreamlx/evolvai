@@ -148,8 +148,9 @@ Memory Bank MCP uses these standard files:
 
 **During work, self-check at key points**:
 - Before writing code: "Did I check the Story TDD Plan?"
-- Before using tools: "Should I use safe_* version?"
-- Before commit: "Did I run tests?"
+- Before using tools: "Am I using EvolvAI tools first? (batch_edit, safe_exec, safe_search)"
+- Before falling back: "Why can't EvolvAI handle this? Document the reason"
+- Before commit: "Did I run tests with safe_exec?"
 
 ### Memory Bank as Development Tool
 
@@ -291,18 +292,35 @@ When developing EvolvAI features, **prioritize EvolvAI MCP tools** to:
 
 **Goal**: Use EvolvAI to improve EvolvAI itself, demonstrating TPST reduction in practice.
 
+### Tool Selection Priority (DOGFOODING)
+
+**🎯 PRIORITY ORDER - Always try in this sequence**:
+
+1. **EvolvAI MCP** (FIRST CHOICE - We're dogfooding!)
+   - `batch_edit` → For ANY multi-line text changes
+   - `safe_exec` → For ANY command execution
+   - `safe_search` → For ANY pattern searching
+
+2. **Serena MCP** (ONLY when EvolvAI can't handle)
+   - `find_symbol` → Only for precise symbol navigation
+   - `replace_symbol_body` → Only for whole function/class replacement
+   - `rename_symbol` → Only for refactoring names across codebase
+
+3. **Native Tools** (LAST RESORT)
+   - Only use when both EvolvAI and Serena can't handle
+   - Document why EvolvAI tools weren't suitable
+
 ### Tool Selection Quick Reference
 
-| Task Type | Recommended MCP | Tool |
-|-----------|----------------|------|
-| Load project context | Memory Bank | "follow your custom instructions" |
-| Update project state | Memory Bank | "update memory bank" |
-| Symbol-level editing | Serena | `replace_symbol_body`, `insert_after_symbol` |
-| Batch text replacement | EvolvAI | `batch_edit` |
-| Run tests safely | EvolvAI | `safe_exec` |
-| Search with limits | EvolvAI | `safe_search` |
-| Code refactoring | Serena | `rename_symbol`, LSP tools |
-| Learn coding patterns | EvolvAI | `analyze_coding_standards` |
+| Task Type | MUST Use | Why |
+|-----------|----------|-----|
+| **Text editing (multiple lines)** | EvolvAI: `batch_edit` | TPST tracking, preview mode |
+| **Command execution** | EvolvAI: `safe_exec` | Timeout, output limits |
+| **Pattern search** | EvolvAI: `safe_search` | Result limits, area detection |
+| **Single line edit** | Native: `Edit` | EvolvAI batch_edit overkill |
+| **Symbol navigation** | Serena: `find_symbol` | LSP precision needed |
+| **Symbol refactoring** | Serena: `rename_symbol` | Cross-file consistency |
+| **File reading** | Native: `Read` | Simple, no constraints needed |
 
 ### Evolution Roadmap
 
