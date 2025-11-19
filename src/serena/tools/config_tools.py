@@ -2,7 +2,7 @@ from serena.config.context_mode import SerenaAgentMode
 from serena.tools import Tool, ToolMarkerDoesNotRequireActiveProject, ToolMarkerOptional
 
 
-class ActivateProjectTool(Tool, ToolMarkerDoesNotRequireActiveProject):
+class ActivateProjectTool(Tool, ToolMarkerDoesNotRequireActiveProject, ToolMarkerOptional):
     """
     Activates a project based on the project name or path.
     """
@@ -53,7 +53,7 @@ class SwitchModesTool(Tool, ToolMarkerOptional):
         return result_str
 
 
-class GetCurrentConfigTool(Tool):
+class GetCurrentConfigTool(Tool, ToolMarkerOptional):
     """
     Prints the current configuration of the agent, including the active and available projects, tools, contexts, and modes.
     """

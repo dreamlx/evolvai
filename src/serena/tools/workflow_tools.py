@@ -8,7 +8,7 @@ import platform
 from serena.tools import Tool, ToolMarkerDoesNotRequireActiveProject, ToolMarkerOptional
 
 
-class CheckOnboardingPerformedTool(Tool):
+class CheckOnboardingPerformedTool(Tool, ToolMarkerOptional):
     """
     Checks whether project onboarding was already performed.
     """
@@ -38,7 +38,7 @@ class CheckOnboardingPerformedTool(Tool):
             {memories}"""
 
 
-class OnboardingTool(Tool):
+class OnboardingTool(Tool, ToolMarkerOptional):
     """
     Performs onboarding (identifying the project structure and essential tasks, e.g. for testing or building).
     """
@@ -54,7 +54,7 @@ class OnboardingTool(Tool):
         return self.prompt_factory.create_onboarding_prompt(system=system)
 
 
-class ThinkAboutCollectedInformationTool(Tool):
+class ThinkAboutCollectedInformationTool(Tool, ToolMarkerOptional):
     """
     Thinking tool for pondering the completeness of collected information.
     """
@@ -68,7 +68,7 @@ class ThinkAboutCollectedInformationTool(Tool):
         return self.prompt_factory.create_think_about_collected_information()
 
 
-class ThinkAboutTaskAdherenceTool(Tool):
+class ThinkAboutTaskAdherenceTool(Tool, ToolMarkerOptional):
     """
     Thinking tool for determining whether the agent is still on track with the current task.
     """
@@ -84,7 +84,7 @@ class ThinkAboutTaskAdherenceTool(Tool):
         return self.prompt_factory.create_think_about_task_adherence()
 
 
-class ThinkAboutWhetherYouAreDoneTool(Tool):
+class ThinkAboutWhetherYouAreDoneTool(Tool, ToolMarkerOptional):
     """
     Thinking tool for determining whether the task is truly completed.
     """
@@ -110,7 +110,7 @@ class SummarizeChangesTool(Tool, ToolMarkerOptional):
         return self.prompt_factory.create_summarize_changes()
 
 
-class PrepareForNewConversationTool(Tool):
+class PrepareForNewConversationTool(Tool, ToolMarkerOptional):
     """
     Provides instructions for preparing for a new conversation (in order to continue with the necessary context).
     """

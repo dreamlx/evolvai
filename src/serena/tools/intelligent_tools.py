@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import Optional
 
 from serena.memory.environment_preferences import EnvironmentPreferenceMemory
-from serena.tools import Tool
+from serena.tools import Tool, ToolMarkerOptional
 
 
-class DetectEnvironmentTool(Tool):
+class DetectEnvironmentTool(Tool, ToolMarkerOptional):
     """
     Detect and record user's development environment preferences.
 
@@ -175,7 +175,7 @@ class DetectEnvironmentTool(Tool):
         return None
 
 
-class GenerateOptimizedCommandTool(Tool):
+class GenerateOptimizedCommandTool(Tool, ToolMarkerOptional):
     """
     Generate commands optimized for user's environment preferences.
 
@@ -277,7 +277,7 @@ class GenerateOptimizedCommandTool(Tool):
             return f"# Command for '{intent}' not recognized"
 
 
-class ShowEnvironmentPreferencesTool(Tool):
+class ShowEnvironmentPreferencesTool(Tool, ToolMarkerOptional):
     """
     Show current environment preferences learned by Serena.
 

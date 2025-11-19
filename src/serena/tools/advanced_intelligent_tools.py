@@ -9,10 +9,10 @@ import json
 from typing import Any, Optional
 
 from serena.memory.intelligent_memory import SerenaIntelligentMemory
-from serena.tools import Tool
+from serena.tools import Tool, ToolMarkerOptional
 
 
-class OptimizeAIToolsTool(Tool):
+class OptimizeAIToolsTool(Tool, ToolMarkerOptional):
     """
     Comprehensive AI tool optimization using Serena's intelligent memory.
 
@@ -118,7 +118,7 @@ class OptimizeAIToolsTool(Tool):
         return recommendations
 
 
-class GenerateOptimizedCodeTool(Tool):
+class GenerateOptimizedCodeTool(Tool, ToolMarkerOptional):
     """
     Generate code optimized for the project's standards and environment.
 
@@ -240,7 +240,7 @@ class GenerateOptimizedCodeTool(Tool):
 // TODO: Implement actual code generation logic"""
 
 
-class ShowIntelligentMemoryStatusTool(Tool):
+class ShowIntelligentMemoryStatusTool(Tool, ToolMarkerOptional):
     """
     Show comprehensive status of Serena's intelligent memory system.
 
@@ -276,7 +276,7 @@ class ShowIntelligentMemoryStatusTool(Tool):
         )
 
 
-class ResetIntelligentMemoryTool(Tool):
+class ResetIntelligentMemoryTool(Tool, ToolMarkerOptional):
     """
     Reset Serena's intelligent memory system.
 

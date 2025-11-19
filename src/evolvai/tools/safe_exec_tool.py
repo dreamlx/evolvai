@@ -11,10 +11,18 @@ from serena.tools.tools_base import Tool
 
 
 class SafeExecTool(Tool):
-    """Safe command execution with precondition checks and timeout management.
-    
-    Detects risky commands, validates availability, truncates output.
-    See docs/guides/tool-usage.md for usage guidance.
+    """Safe command execution with environment awareness and safety checks.
+
+    When to use:
+    - Run project commands (build, test, lint)
+    - Don't know exact command syntax (auto-adapts to environment)
+    - Need protection from dangerous commands
+    - Want automatic output truncation
+
+    When NOT to use:
+    - Know exact command and it's safe (use Native Bash)
+    - Need real-time interactive input
+    - Long-running servers (use Native Bash with background mode)
     """
 
     def apply(
@@ -25,10 +33,16 @@ class SafeExecTool(Tool):
         execution_plan: Optional[ExecutionPlan] = None,
         confirmed: bool = False,
     ) -> str:
-        """Execute shell command safely with precondition checks and timeout.
-        
-        Detects risky commands, validates availability, requires confirmation for dangerous operations.
-        Returns JSON with exit_code, stdout, stderr, timeout info, and confirmation status.
+        """Execute shell command with safety checks and timeout.
+
+        Args:
+            command: Shell command to execute
+            timeout: Max execution time in seconds
+            working_dir: Working directory (default: project root)
+            execution_plan: Optional execution constraints
+            confirmed: Bypass confirmation for risky commands (default False)
+
+        Returns: JSON with exit_code, stdout, stderr, duration_ms, safety info
         """
         import json
 

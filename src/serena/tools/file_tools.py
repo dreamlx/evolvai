@@ -291,7 +291,7 @@ class InsertAtLineTool(Tool, ToolMarkerCanEdit, ToolMarkerOptional):
         return SUCCESS_RESULT
 
 
-class SearchForPatternTool(Tool):
+class SearchForPatternTool(Tool, ToolMarkerOptional):
     """
     Performs a search for a pattern in the project.
     """

@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import Any, Optional
 
 from serena.memory.coding_standards import CodingStandardsMemory
-from serena.tools import Tool
+from serena.tools import Tool, ToolMarkerOptional
 
 
-class AnalyzeCodingStandardsTool(Tool):
+class AnalyzeCodingStandardsTool(Tool, ToolMarkerOptional):
     """
     Analyze existing codebase to learn coding standards and conventions.
 
@@ -182,7 +182,7 @@ class AnalyzeCodingStandardsTool(Tool):
         return patterns
 
 
-class ApplyCodingStandardsTool(Tool):
+class ApplyCodingStandardsTool(Tool, ToolMarkerOptional):
     """
     Apply learned coding standards to generated code.
 
@@ -280,7 +280,7 @@ class ApplyCodingStandardsTool(Tool):
         return {"naming_convention": convention, "style_rules_applied": bool(style_prefs)}
 
 
-class ShowCodingStandardsTool(Tool):
+class ShowCodingStandardsTool(Tool, ToolMarkerOptional):
     """
     Show current coding standards and conventions learned by Serena.
 

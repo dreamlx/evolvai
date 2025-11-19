@@ -12,10 +12,18 @@ from serena.tools.tools_base import Tool, ToolMarkerCanEdit
 
 
 class SafeSearchTool(Tool, ToolMarkerCanEdit):
-    """智能搜索工具 - safe_search的MCP接口
+    """Intelligent search with auto area detection and resource limits.
 
-    多区域智能搜索，自动项目检测和约束执行。
-    支持区域检测、查询路由、预算分配和性能监控。
+    When to use:
+    - High-level search query ("find auth logic")
+    - Don't know exact file locations
+    - Multi-area projects (backend + frontend)
+    - Need protection from search explosion
+
+    When NOT to use:
+    - Know exact pattern and files (use search_for_pattern or Native Grep)
+    - Need precise control over glob patterns
+    - Single-area project (overhead not worth it)
     """
 
     def apply(
@@ -29,91 +37,19 @@ class SafeSearchTool(Tool, ToolMarkerCanEdit):
         timeout_seconds: int = 30,
         scope: str = "**/*",
     ) -> str:
-        """
-        执行智能搜索，支持自动区域检测和约束执行
+        """Execute intelligent search with auto area detection and constraints.
 
         Args:
-            query: 搜索查询或模式
-                Examples: ["find JWT authentication handler", "locate React login component", "search for TODO comments"]
-                Negative examples: [".*", "find everything", "all files"]
-            area_selector: 区域选择策略
-                Enum: ["auto", "backend-go", "frontend-ts", "ruby", "python"]
-                Default: "auto"
-                Examples: [
-                    "auto - automatically detect and route to relevant areas",
-                    "backend-go - search only Go backend area",
-                    "frontend-ts - search only TypeScript frontend area"
-                ]
-            include_areas: 显式区域定义（覆盖自动检测）
-                Schema: {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "name": {"type": "string"},
-                            "root": {"type": "string"},
-                            "include_globs": {"type": "array", "items": {"type": "string"}},
-                            "exclude_globs": {"type": "array", "items": {"type": "string"}}
-                        }
-                    }
-                }
-            max_files: 每个区域最大搜索文件数
-                Range: [1, 1000]
-                Default: 50
-                Field dependencies: {
-                    "area_count": {
-                        "single": {"default": 50},
-                        "multiple": {"default": 30}
-                    }
-                }
-            mode: 搜索模式影响预算分配
-                Enum: ["conservative", "balanced", "broad"]
-                Default: "balanced"
-                Examples: [
-                    "conservative - strict limits, 20 files per area",
-                    "balanced - standard limits, 30 files per area",
-                    "broad - relaxed limits, 50 files per area"
-                ]
-            max_results: 最大结果数
-                Range: [1, 500]
-                Default: 100
-            timeout_seconds: 超时时间（秒）
-                Range: [5, 300]
-                Default: 30
-            scope: 搜索范围模式（向后兼容）
-                Default: "**/*"
+            query: Natural language search query
+            area_selector: "auto" (detect) or specific area like "backend-go" (default "auto")
+            include_areas: Optional explicit area definitions (overrides auto-detection)
+            mode: "conservative" | "balanced" | "broad" (default "balanced")
+            max_files: Max files per area (default 50)
+            max_results: Max total results (default 100)
+            timeout_seconds: Max search time (default 30)
+            scope: Legacy glob pattern (default "**/*")
 
-        Returns:
-            JSON string containing:
-            - success: boolean - 搜索是否成功
-            - query: string - 搜索查询
-            - total_results: integer - 结果总数
-            - execution_report: object - 详细执行报告
-                - detected_areas: array - 检测到的项目区域
-                - applied_areas: array - 应用的区域配置
-                - applied_patterns: array - 应用的搜索模式
-                - execution_time_ms: float - 执行时间
-                - coverage: object - 区域覆盖率统计
-                - performance: object - 性能指标
-            - raw_results: array - 原始搜索结果（可选）
-            - error: object - 错误信息（如果有）
-
-        Examples:
-            Auto-Detected Backend Search:
-                query="find JWT authentication handler", area_selector="auto", mode="balanced"
-                Expected: Auto-routes to Go backend area with 35 file budget
-
-            Explicit Frontend Search:
-                query="locate React login component", area_selector="frontend-ts", max_files=40
-                Expected: Searches only TypeScript frontend with 40 file limit
-
-            Multi-Area Configuration:
-                query="find authConfig usage", include_areas=[
-                    {"name": "backend-go", "root": "backend", "include_globs": ["backend/**/*.go"]},
-                    {"name": "frontend-ts", "root": "frontend", "include_globs": ["frontend/**/*.ts"]}
-                ]
-                Expected: Searches both configured areas with custom patterns
-
+        Returns: JSON with success, query, total_results, execution_report, raw_results
         """
         try:
             # 获取项目根目录
