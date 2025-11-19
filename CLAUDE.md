@@ -30,6 +30,15 @@ This file provides guidance to Claude Code when working in this repository.
 
 ---
 
+## 🚨 核心规则（新会话必读）
+
+### 📂 文档边界（操作docs/前必须理解）
+- `docs/` = **业务文档仓库ONLY**（需求、架构、测试、指南、知识沉淀）
+- `.claude/` = AI工具配置和元文档
+- `workspace/` = 临时工作文件、执行计划、检查清单
+- ⚠️ **违反边界 = 系统混乱**
+
+
 ## 🚀 START HERE - 第一步
 
 **⚡ CRITICAL**: 运行 `/context-load` 加载项目上下文
@@ -83,9 +92,6 @@ This file provides guidance to Claude Code when working in this repository.
 ```
 🥇 EvolvAI MCP (首选)
    └─ batch_edit, safe_exec, safe_search
-
-🥈 Serena MCP (仅当 EvolvAI 无法处理)
-   └─ find_symbol, replace_symbol_body, rename_symbol
 
 🥉 Native Tools (最后手段，需记录原因)
    └─ Read, Write, Edit, Grep, Glob

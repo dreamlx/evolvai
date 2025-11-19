@@ -7,9 +7,7 @@ import asyncio
 import os
 import signal
 import tempfile
-import time
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
 
@@ -127,7 +125,7 @@ class TestProcessLifecycleManager:
             manager._cleanup_pid_file()
 
     async def test_no_stdin_monitor_should_exist(self):
-        """stdin monitor should NOT exist (conflicts with FastMCP)."""
+        """Stdin monitor should NOT exist (conflicts with FastMCP)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pid_file = Path(tmpdir) / "test.pid"
             manager = ProcessLifecycleManager(pid_file_path=str(pid_file))
