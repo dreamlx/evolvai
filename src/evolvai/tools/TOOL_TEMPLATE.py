@@ -1,41 +1,51 @@
 """Tool Template - READ THIS FIRST when creating new MCP tools.
 
-⚠️ CRITICAL: MCP Tool Docstring Rule
-====================================
+⚠️ CRITICAL: MCP Tool Docstring Rules
+=====================================
 
-Class docstring MUST be ≤ 10 lines.
+**What MCP transmits**: apply() method docstring (NOT class docstring!)
+
+Source: mcp.py line 177: func_doc = tool.get_apply_docstring()
+        tools_base.py line 166: docstring = apply_fn.__doc__
+
+**apply() docstring MUST be ≤ 10 lines**
 
 Reason: Transmitted on EVERY MCP connection (~1 token/word)
-Impact: 160-line docstring = 1.5k wasted tokens per session
+Impact: 89-line docstring = 1.3k wasted tokens per session
 Guide: See docs/guides/tool-usage.md for detailed documentation
 
+Class vs Method Docstrings:
+----------------------------
+- Class docstring: For human developers (can be longer, not transmitted)
+- apply() docstring: For MCP/LLM (≤10 lines, transmitted every connection)
+
 Example Structure:
-    \"\"\"[Verb] [object] [with key constraint].
+    def apply(self, ...) -> str:
+        \"\"\"[One-line capability statement].
+        
+        [1-2 lines key constraints/features]
+        [Optional: Returns/output format]
+        \"\"\"
 
-    [1-2 sentences describing key features or use cases]
-    See docs/guides/tool-usage.md for detailed usage.
-    \"\"\"
-
-✅ Good Examples:
------------------
-- "Batch edit files using regex patterns with ExecutionPlan constraints."
-- "Safe command execution with precondition checks and timeout management."
+✅ Good Examples (apply() docstring):
+-------------------------------------
+- "Batch edit files using regex patterns with preview and rollback."
+- "Execute shell command safely with precondition checks and timeout."
 - "Search codebase with area detection and budget limits."
 
-❌ Bad Examples (TOO VERBOSE):
--------------------------------
-- Multi-paragraph tool philosophy
-- Level 1/2/3 classification explanations
-- Detailed usage scenarios and examples
-- Decision trees and selection guides
-- Real-world case studies
+❌ Bad Examples (TOO VERBOSE in apply()):
+-----------------------------------------
+- Multi-paragraph detailed explanations
+- Full Args/Returns/Raises sections
+- Usage examples and code snippets
+- Design principles and rationale
 
 Where to put detailed content:
 -------------------------------
-- Tool selection frameworks → docs/guides/tool-usage.md
-- Usage examples → docs/guides/tool-usage.md
-- Design rationale → docs/development/architecture/adrs/
-- API reference → Method docstrings (can be longer)
+- Class docstring: Brief tool description (for developers)
+- apply() docstring: ≤10 lines capability statement (for MCP)
+- docs/guides/: Educational content, examples, patterns
+- Method parameters: Use type hints + brief inline comments
 
 """
 
@@ -46,9 +56,10 @@ from serena.tools.tools_base import Tool
 
 
 class YourToolTemplate(Tool):
-    """[Verb] [object] [with constraint].
-
-    [1-2 sentences about key features or constraints]
+    """[Brief tool description for developers].
+    
+    This class docstring is NOT transmitted by MCP.
+    You can be more descriptive here if needed for human developers.
     See docs/guides/tool-usage.md for usage guidance.
     """
 
@@ -59,38 +70,11 @@ class YourToolTemplate(Tool):
         param2: int = 10,
         execution_plan: Optional[ExecutionPlan] = None,
     ) -> str:
-        """[Brief one-line description of what this method does].
-
-        This method docstring CAN be longer (not transmitted by MCP).
-        You can provide detailed Args/Returns/Raises here.
-
-        Args:
-            param1: Description with example (e.g., "pattern like r'\\w+'")
-            param2: Description with default explanation
-            execution_plan: Optional ExecutionPlan for constraint validation
-
-        Returns:
-            JSON string with results containing:
-            - success: bool
-            - data: dict
-            - error_message: Optional[str]
-
-        Raises:
-            ConstraintViolationError: If ExecutionPlan constraints violated
-            ValueError: If parameters invalid
-
-        Example:
-            >>> your_tool(param1="value", param2=20)
-            '{"success": true, "data": {...}}'
-
+        """[One-line capability statement with key constraint].
+        
+        [Optional: 1-2 lines about returns or critical behavior]
         """
         # Implementation here
-        import json
-
-        # Your logic
-        result = {"success": True, "data": {}, "error_message": None}
-
-        return json.dumps(result, indent=2)
 
 
 # Quick Checklist Before Committing:
