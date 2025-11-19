@@ -25,54 +25,10 @@ class SafeExecTool(Tool):
         execution_plan: Optional[ExecutionPlan] = None,
         confirmed: bool = False,
     ) -> str:
-        """Execute a shell command safely with precondition checks and optional confirmation.
-
-        Two-phase execution (Story 2.4):
-        1. First call (confirmed=False): Returns confirmation_required=True if risky
-        2. Second call (confirmed=True): Executes after user confirmation
-
-        This tool provides safe command execution with multiple layers of validation:
-        - Detects absurd commands (rm -rf /, mkfs, fork bombs)
-        - Detects interactive commands (vim, ssh, sudo without -n)
-        - Detects high-risk operations requiring confirmation (wildcards, current dir deletes)
-        - Validates command availability (prevents "command not found")
-        - Enforces timeout limits (max 300s)
-        - Truncates long output (head 50 + tail 50 lines)
-        - Optionally validates against ExecutionPlan constraints
-
-        Args:
-            command: The shell command to execute
-            timeout: Execution timeout in seconds (1-300s)
-            working_dir: Working directory for command execution (defaults to project root)
-            execution_plan: Optional ExecutionPlan for constraint validation
-            confirmed: Skip confirmation check if True (Story 2.4)
-
-        Returns:
-            JSON string with execution results containing:
-            - success: bool
-            - exit_code: int
-            - stdout: str (truncated if > 100 lines)
-            - stderr: str (truncated if > 100 lines)
-            - duration_ms: float
-            - timeout_occurred: bool
-            - suggested_timeout: Optional[int] (AI learning feedback)
-            - confirmation_required: bool (Story 2.4)
-            - confirmation_message: Optional[str] (Story 2.4)
-            - risk_level: str (Story 2.4)
-
-        Raises:
-            ConstraintViolationError: If preconditions fail (absurd command, missing command, etc.)
-
-        Example:
-            >>> safe_exec(command="echo hello", timeout=5)
-            '{"success": true, "exit_code": 0, "stdout": "hello\\n", ...}'
-
-            >>> safe_exec(command="rm -rf ./tmp_*", timeout=5)
-            '{"confirmation_required": true, "risk_level": "high", ...}'
-
-            >>> safe_exec(command="rm -rf ./tmp_*", timeout=5, confirmed=True)
-            '{"success": true, "confirmation_required": false, ...}'
-
+        """Execute shell command safely with precondition checks and timeout.
+        
+        Detects risky commands, validates availability, requires confirmation for dangerous operations.
+        Returns JSON with exit_code, stdout, stderr, timeout info, and confirmation status.
         """
         import json
 
