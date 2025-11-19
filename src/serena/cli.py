@@ -169,10 +169,18 @@ class TopLevelCommands(AutoRegisteringGroup):
         file_handler.formatter = formatter
         Logger.root.addHandler(file_handler)
 
+        # Setup process lifecycle management to prevent orphaned processes
+        from serena.util.process_lifecycle import ProcessLifecycleManager
+
+        lifecycle_manager = ProcessLifecycleManager()
+        lifecycle_manager.setup()
+
         log.info("Initializing Serena MCP server")
         log.info("Storing logs in %s", log_path)
         project_file = project_file_arg or project
-        factory = SerenaMCPFactorySingleProcess(context=context, project=project_file, memory_log_handler=memory_log_handler)
+        factory = SerenaMCPFactorySingleProcess(
+            context=context, project=project_file, memory_log_handler=memory_log_handler, lifecycle_manager=lifecycle_manager
+        )
         server = factory.create_mcp_server(
             host=host,
             port=port,

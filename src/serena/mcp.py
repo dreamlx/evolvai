@@ -8,7 +8,10 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 from contextlib import asynccontextmanager
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+if TYPE_CHECKING:
+    from serena.util.process_lifecycle import ProcessLifecycleManager
 
 import docstring_parser
 from mcp.server.fastmcp import server
@@ -315,16 +318,24 @@ class SerenaMCPFactorySingleProcess(SerenaMCPFactory):
     MCP server factory where the SerenaAgent and its language server run in the same process as the MCP server
     """
 
-    def __init__(self, context: str = DEFAULT_CONTEXT, project: str | None = None, memory_log_handler: MemoryLogHandler | None = None):
+    def __init__(
+        self,
+        context: str = DEFAULT_CONTEXT,
+        project: str | None = None,
+        memory_log_handler: MemoryLogHandler | None = None,
+        lifecycle_manager: "ProcessLifecycleManager | None" = None,
+    ):
         """
         :param context: The context name or path to context file
         :param project: Either an absolute path to the project directory or a name of an already registered project.
             If the project passed here hasn't been registered yet, it will be registered automatically and can be activated by its name
             afterward.
+        :param lifecycle_manager: Process lifecycle manager for preventing orphaned processes
         """
         super().__init__(context=context, project=project)
         self.agent: SerenaAgent | None = None
         self.memory_log_handler = memory_log_handler
+        self.lifecycle_manager = lifecycle_manager
 
     def _instantiate_agent(self, serena_config: SerenaConfig, modes: list[SerenaAgentMode]) -> None:
         self.agent = SerenaAgent(
@@ -344,5 +355,15 @@ class SerenaMCPFactorySingleProcess(SerenaMCPFactory):
     async def server_lifespan(self, mcp_server: FastMCP) -> AsyncIterator[None]:
         openai_tool_compatible = self.context.name in ["chatgpt", "codex", "oaicompat-agent"]
         self._set_mcp_tools(mcp_server, openai_tool_compatible=openai_tool_compatible)
+
+        # Start lifecycle monitoring tasks
+        if self.lifecycle_manager:
+            # Note: stdin monitor removed - conflicts with FastMCP stdio transport
+            await self.lifecycle_manager.start_parent_monitor()  # 1-second interval
+
         log.info("MCP server lifetime setup complete")
         yield
+
+        # Cleanup lifecycle manager on shutdown
+        if self.lifecycle_manager:
+            self.lifecycle_manager.stop()

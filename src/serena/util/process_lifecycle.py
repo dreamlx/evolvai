@@ -6,8 +6,10 @@ and ensure clean shutdown when parent processes (like Claude Code) exit.
 Key features:
 - PID file management to detect and cleanup old instances
 - Signal handlers for graceful shutdown
-- stdin EOF monitoring for stdio transport
-- Parent process health monitoring
+- Parent process health monitoring (1-second interval)
+
+Note: stdin EOF monitoring was removed as it conflicts with FastMCP's stdio transport.
+The parent process health check provides sufficient coverage for detecting parent exit.
 """
 
 import asyncio
@@ -36,7 +38,6 @@ class ProcessLifecycleManager:
         self.pid_file = Path(pid_file_path or "/tmp/evolvai-mcp-server.pid")
         self.parent_pid = os.getppid()
         self.shutdown_initiated = False
-        self._stdin_monitor_task: Optional[asyncio.Task] = None
         self._parent_monitor_task: Optional[asyncio.Task] = None
 
     def setup(self) -> None:
@@ -134,51 +135,11 @@ class ProcessLifecycleManager:
         signal.signal(signal.SIGINT, signal_handler)
         log.debug("Signal handlers installed (SIGTERM, SIGINT)")
 
-    async def start_stdin_monitor(self) -> None:
-        """Start monitoring stdin for EOF (parent process disconnect).
+    # stdin EOF monitor removed - conflicts with FastMCP's stdio transport
+    # FastMCP needs exclusive access to stdin for reading MCP requests
+    # Parent process health monitoring provides sufficient coverage
 
-        This is critical for stdio transport - when Claude Code exits,
-        stdin will close, and we should shutdown the server.
-        """
-        if self._stdin_monitor_task is not None:
-            log.warning("stdin monitor already running")
-            return
-
-        self._stdin_monitor_task = asyncio.create_task(self._stdin_monitor_loop())
-        log.info("Started stdin EOF monitor")
-
-    async def _stdin_monitor_loop(self) -> None:
-        """Monitor stdin and exit when it closes."""
-        try:
-            loop = asyncio.get_event_loop()
-            reader = asyncio.StreamReader()
-            protocol = asyncio.StreamReaderProtocol(reader)
-
-            # Connect to stdin
-            await loop.connect_read_pipe(lambda: protocol, sys.stdin)
-
-            # Read until EOF - use readline() to properly detect EOF
-            log.debug("stdin monitor: waiting for EOF")
-            while True:
-                try:
-                    data = await reader.readline()
-                    if not data:  # EOF reached
-                        break
-                    # Otherwise, ignore the data and continue reading
-                except asyncio.CancelledError:
-                    log.debug("stdin monitor cancelled")
-                    return
-
-            # stdin closed (parent exited)
-            log.warning("stdin closed (parent process likely exited), shutting down MCP server")
-            self.shutdown_initiated = True
-            self._cleanup_pid_file()
-            os._exit(0)  # Force immediate exit
-
-        except Exception as e:
-            log.error("Error in stdin monitor: %s", e, exc_info=True)
-
-    async def start_parent_monitor(self, check_interval: float = 5.0) -> None:
+    async def start_parent_monitor(self, check_interval: float = 1.0) -> None:
         """Start monitoring parent process health.
 
         Args:
@@ -213,9 +174,7 @@ class ProcessLifecycleManager:
 
     def stop(self) -> None:
         """Stop all monitoring tasks and cleanup."""
-        if self._stdin_monitor_task:
-            self._stdin_monitor_task.cancel()
-            self._stdin_monitor_task = None
+        self.shutdown_initiated = True
 
         if self._parent_monitor_task:
             self._parent_monitor_task.cancel()
