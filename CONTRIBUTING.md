@@ -48,6 +48,27 @@ uv run poe type-check
 - 添加适当的注释和文档字符串
 - 确保所有测试通过
 
+#### MCP Tool Guidelines
+
+**Docstring Rule**: Class docstring ≤ 10 lines
+
+- **Reason**: MCP tool descriptions are transmitted on every connection (~1 token/word)
+- **Example**: See `src/evolvai/tools/batch_edit_tool.py` (after cleanup)
+- **Detailed guides**: Use `docs/guides/` for educational content instead
+
+**Why this limit**: batch_edit had 160-line docstring = 1.5k wasted tokens per session
+
+**What goes in tool docstring** (≤ 10 lines):
+- Single-sentence capability statement
+- 2-3 key constraints or features
+- Reference to detailed guide
+
+**What goes in docs/guides/** (unlimited):
+- Tool selection frameworks (Level 1/2/3)
+- Usage examples and case studies
+- Common mistakes and solutions
+- Design philosophy and rationale
+
 ## 🎯 贡献方向
 
 ### 🌍 环境支持扩展

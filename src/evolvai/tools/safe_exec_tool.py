@@ -11,14 +11,10 @@ from serena.tools.tools_base import Tool
 
 
 class SafeExecTool(Tool):
-    """Safe command execution tool exposed via MCP.
-
-    Provides safe command execution with:
-    - Fast-fail precondition checking
-    - Timeout management with AI feedback
-    - Interactive command detection
-    - Output truncation to reduce token waste
-    - Optional ExecutionPlan constraint validation
+    """Safe command execution with precondition checks and timeout management.
+    
+    Detects risky commands, validates availability, truncates output.
+    See docs/guides/tool-usage.md for usage guidance.
     """
 
     def apply(

@@ -85,20 +85,9 @@ class SafeSearchWrapper:
         timeout_seconds: Optional[int] = None,
         **kwargs,
     ) -> dict[str, Any]:
-        """
-        MCP接口的安全搜索方法
-
-        Args:
-            query: 搜索查询
-            area_selector: 区域选择策略 ("auto", "backend-go", "frontend-ts", etc.)
-            mode: 搜索模式 ("conservative", "balanced", "broad")
-            max_files: 最大文件数限制
-            timeout_seconds: 超时时间限制
-            **kwargs: 其他参数
-
-        Returns:
-            格式化的搜索结果
-
+        """Search codebase with area detection and budget limits.
+        
+        Automatically detects project areas, routes queries, and applies constraints.
         """
         # 1. 检测项目区域
         areas = self.area_detector.detect_areas()

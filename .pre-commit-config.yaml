@@ -1,0 +1,43 @@
+# Pre-commit hooks for EvolvAI
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+
+repos:
+  # MCP Tool Docstring Length Check
+  - repo: local
+    hooks:
+      - id: check-tool-docstrings
+        name: Check MCP Tool Docstring Length
+        entry: python3 scripts/check-tool-docstrings.py
+        language: system
+        files: ^src/(evolvai|serena)/tools/.*\.py$
+        pass_filenames: true
+        description: "Ensure Tool class docstrings ≤ 10 lines (MCP token optimization)"
+
+  # Python Code Quality
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # Type Checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports, --no-strict-optional]
+
+  # General Checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: check-case-conflict
