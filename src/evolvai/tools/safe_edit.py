@@ -25,15 +25,12 @@ class PatchNotFoundError(Exception):
     """Patch ID 不存在"""
 
 
-
 class PatchAlreadyAppliedError(Exception):
     """Patch 已经被应用过"""
 
 
-
 class PatchOutdatedError(Exception):
     """Patch 过期（文件已变化）"""
-
 
 
 class ConstraintViolationError(Exception):
@@ -48,7 +45,6 @@ class ConstraintViolationError(Exception):
 
 class ApplyError(Exception):
     """应用 Patch 时发生错误"""
-
 
 
 @dataclass
@@ -71,7 +67,7 @@ class SafeEditTool:
     使用方式:
     1. result = tool.propose_edit(pattern, replacement, scope)
     2. 用户检查 result["unified_diff"]
-    3. tool.apply_edit(result["patch_id"], execution_plan)
+    3. tool.apply_edit(result["patch_id"])
     """
     
     def __init__(self, project_root: Optional[Path] = None, rollback_manager: Any = None):
@@ -216,6 +212,96 @@ class SafeEditTool:
             "statistics": statistics
         }
     
+    def apply_edit(
+        self,
+        patch_id: str,
+        execution_plan: Any = None
+    ) -> dict[str, Any]:
+        """
+        应用已验证的 patch
+        
+        Args:
+            patch_id: Patch ID
+            execution_plan: ExecutionPlan 约束（可选，Cycle 3 实现）
+            
+        Returns:
+            dict: {
+                "success": bool,
+                "rollback_id": str,
+                "modified_files": list[str]
+            }
+            
+        Raises:
+            PatchNotFoundError: patch_id 不存在
+            PatchAlreadyAppliedError: patch 已经被应用过
+            PatchOutdatedError: 文件在 propose 后被修改
+
+        """
+        # 1. 验证 patch_id 存在
+        if patch_id not in self.patch_store:
+            raise PatchNotFoundError(f"Patch '{patch_id}' not found")
+        
+        patch = self.patch_store[patch_id]
+        
+        # 2. 检查 patch 是否已经应用过
+        if patch.applied:
+            raise PatchAlreadyAppliedError(f"Patch '{patch_id}' has already been applied")
+        
+        # 3. 检查文件是否在 propose 后被修改（过期检测）
+        for change in patch.changes:
+            file_path = self.project_root / change["file"]
+            if file_path.exists():
+                current_content = file_path.read_text()
+                current_hash = hashlib.md5(current_content.encode()).hexdigest()
+                if current_hash != change["hash"]:
+                    raise PatchOutdatedError(
+                        f"File '{change['file']}' has changed since propose_edit. "
+                        "Please re-run propose_edit to get updated diff."
+                    )
+        
+        # 4. 创建备份（用于回滚）
+        backups: dict[str, str] = {}
+        for change in patch.changes:
+            file_path = self.project_root / change["file"]
+            if file_path.exists():
+                backups[change["file"]] = file_path.read_text()
+        
+        # 5. 应用变更
+        modified_files = []
+        try:
+            for change in patch.changes:
+                file_path = self.project_root / change["file"]
+                file_path.write_text(change["new"])
+                modified_files.append(change["file"])
+            
+            # 6. 标记 patch 为已应用
+            patch.applied = True
+            
+            # 7. 生成 rollback_id
+            rollback_id = self._generate_rollback_id(patch_id)
+            
+            # 8. 如果有 rollback_manager，保存备份
+            if self.rollback_manager is not None:
+                self.rollback_manager.save_backup(rollback_id, backups)
+            else:
+                # 简单实现：保存到内存
+                if not hasattr(self, '_rollback_store'):
+                    self._rollback_store: dict[str, dict[str, str]] = {}
+                self._rollback_store[rollback_id] = backups
+            
+            return {
+                "success": True,
+                "rollback_id": rollback_id,
+                "modified_files": modified_files
+            }
+            
+        except Exception as e:
+            # 发生错误时回滚所有已修改的文件
+            for file_name, original_content in backups.items():
+                file_path = self.project_root / file_name
+                file_path.write_text(original_content)
+            raise ApplyError(f"Apply failed: {e}")
+    
     def _get_patch(self, patch_id: str) -> Optional[dict[str, Any]]:
         """
         获取 Patch 详情
@@ -247,6 +333,13 @@ class SafeEditTool:
         hash_input = f"{timestamp}_{id(self)}"
         hash_value = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
         return f"patch_{timestamp}_{hash_value}"
+    
+    def _generate_rollback_id(self, patch_id: str) -> str:
+        """生成唯一的 rollback_id"""
+        timestamp = int(time.time() * 1000)
+        hash_input = f"{patch_id}_{timestamp}"
+        hash_value = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
+        return f"rollback_{timestamp}_{hash_value}"
 
 
 # 导出
