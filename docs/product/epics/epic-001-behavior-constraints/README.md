@@ -184,21 +184,21 @@
 
 #### Story 2.2: safe_edit核心功能
 - **Story ID**: STORY-2.2
-- **描述**: 实现safe_edit，Patch-First架构，BDD驱动TDD开发
+- **描述**: 实现safe_edit，Patch-First架构，基于工作目录的两阶段编辑，BDD驱动TDD开发
 - **优先级**: [P0]
-- **估算**: 6人天（从7人天优化）
+- **估算**: 5人天（优化后，移除Git worktree降低复杂度）
 - **状态**: [Backlog]
-- **📄 分析**: [Feature 2.2 Critical Analysis](../../../knowledge/critical-analysis-feature-2.2.md)
+- **📄 架构决策**: [ADR-006: 移除Git Worktree依赖](../../../development/architecture/adrs/006-remove-git-worktree-dependency.md)
+- **📄 TDD计划**: [Story 2.2 TDD Plan](../../../development/sprints/current/story-2.2-tdd-plan.md)
 - **📄 BDD场景**: [Story 2.2 BDD Scenarios](../../../development/sprints/current/story-2.2-bdd-scenarios.md)
-- **📄 删除计划**: [DELETION_CHECKLIST.md](../../../../DELETION_CHECKLIST.md)
 - **交付物**:
-  - Patch-First架构（propose_edit/apply_edit）
-  - Git worktree隔离
+  - Patch-First架构（propose_edit/apply_edit 两阶段）
+  - 基于工作目录的diff生成（包含用户所有修改）
   - unified diff生成（difflib）
-  - patch_id机制
-  - ExecutionPlan集成
+  - patch_id机制（内存/临时文件存储）
+  - 文件备份回滚机制（RollbackManager集成）
+  - ExecutionPlan集成（约束检查）
   - UsageLogger集成（复用通用系统）
-  - 冲突处理机制
   - BDD场景驱动的完整测试套件
 
 #### Story 2.2.1: safe_edit单元基准测试
@@ -208,8 +208,9 @@
 - **估算**: 1人天
 - **状态**: [Backlog]
 - **交付物**:
-  - 基准测试用例（编辑速度、patch生成、worktree操作）
-  - propose/apply性能对比
+  - 基准测试用例（编辑速度、patch生成、文件备份/恢复性能）
+  - propose/apply性能对比（目标：propose <100ms, apply <500ms）
+  - 回滚性能测试（RollbackManager集成）
   - CI/CD集成
 
 #### Story 2.2.2: safe_edit MCP集成
@@ -276,7 +277,7 @@
   - 模式切换支持（production/sampling/development）
   - 文档和使用指南
 
-**Phase 2总工作量**: 19.5人天（约4周）- 从14人天增加，但获得完整基准测试能力
+**Phase 2总工作量**: 18.5人天（约4周）- Story 2.2优化为5人天（移除Git worktree）
 
 **🎯 关键创新**:
 - 所有Safe Tools共享统一的基准测试基础设施
