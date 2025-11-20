@@ -752,5 +752,241 @@ class TestMCPToolIntegration:
 # ✅ 返回 JSON 格式结果
 # ✅ 错误处理返回信息字符串
 
+
+class TestIntegration:
+    """Cycle 6: 集成测试"""
+
+    def test_end_to_end_edit_flow(self, tmp_path):
+        """
+        Test 6.1: 端到端编辑流程
+        Given: Python 项目需要重命名变量
+        When: propose → 检查 → apply → 验证
+        Then: 完整工作流正确执行
+        """
+        # Setup: 创建 Python 项目
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+
+        # 主文件
+        main_file = src_dir / "main.py"
+        main_file.write_text("from utils import old_var\nprint(old_var)\n")
+
+        # 工具模块
+        utils_file = src_dir / "utils.py"
+        utils_file.write_text("old_var = 42\n")
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Step 1: Propose
+        result = tool.propose_edit(
+            pattern="old_var",
+            replacement="new_var",
+            scope="**/*.py"
+        )
+
+        assert result["patch_id"] is not None
+        assert len(result["affected_files"]) == 2
+        assert "old_var" in result["unified_diff"]
+        assert "new_var" in result["unified_diff"]
+
+        # Step 2: 检查 diff (用户确认)
+        assert "-old_var" in result["unified_diff"]
+        assert "+new_var" in result["unified_diff"]
+
+        # Step 3: Apply
+        apply_result = tool.apply_edit(result["patch_id"])
+
+        assert apply_result["success"] is True
+        assert len(apply_result["modified_files"]) == 2
+
+        # Step 4: 验证
+        assert "new_var" in main_file.read_text()
+        assert "old_var" not in main_file.read_text()
+        assert "new_var" in utils_file.read_text()
+        assert "old_var" not in utils_file.read_text()
+
+    def test_user_modification_conflict(self, tmp_path):
+        """
+        Test 6.2: 用户修改冲突检测
+        Given: propose_edit 生成 patch
+        When: 用户同时修改了文件
+        Then: apply 检测冲突并拒绝
+        """
+        # Setup
+        file = tmp_path / "main.py"
+        file.write_text("version = '1.0'\n")
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Step 1: Propose
+        result = tool.propose_edit(
+            pattern="version = '1.0'",
+            replacement="version = '2.0'",
+            scope="**/*.py"
+        )
+
+        # Step 2: 模拟用户同时修改文件
+        file.write_text("version = '1.5'\n")  # 用户手动改成 1.5
+
+        # Step 3: Apply 应该检测到冲突
+        with pytest.raises(PatchOutdatedError) as exc:
+            tool.apply_edit(result["patch_id"])
+
+        assert "has changed since propose_edit" in str(exc.value)
+
+        # 验证: 用户修改保持不变
+        assert file.read_text() == "version = '1.5'\n"
+
+    def test_large_scale_refactor(self, tmp_path):
+        """
+        Test 6.3: 大规模重构场景
+        Given: 项目有多个文件需要重构
+        When: 批量替换 API 调用
+        Then: 所有文件正确更新
+        """
+        # Setup: 创建多个文件
+        for i in range(5):
+            file = tmp_path / f"module{i}.py"
+            file.write_text(f"api.getData({i})\napi.getData({i+10})\n")
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Execute
+        result = tool.propose_edit(
+            pattern=r"api\.getData",
+            replacement="api.fetchData",
+            scope="**/*.py"
+        )
+
+        assert len(result["affected_files"]) == 5
+        assert result["statistics"]["files_modified"] == 5
+
+        # Apply
+        apply_result = tool.apply_edit(result["patch_id"])
+
+        assert apply_result["success"] is True
+        assert len(apply_result["modified_files"]) == 5
+
+        # 验证所有文件
+        for i in range(5):
+            content = (tmp_path / f"module{i}.py").read_text()
+            assert "fetchData" in content
+            assert "getData" not in content
+
+    def test_execution_plan_prevents_runaway(self, tmp_path):
+        """
+        Test 6.4: 约束防止失控
+        Given: 危险的替换模式（会影响大量文件）
+        When: ExecutionPlan 设置严格约束
+        Then: 阻止可能的破坏性修改
+        """
+        # Setup: 创建很多文件
+        for i in range(10):
+            file = tmp_path / f"file{i}.py"
+            file.write_text("import os\n")
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Propose (影响 10 个文件)
+        result = tool.propose_edit(
+            pattern="import os",
+            replacement="import sys",
+            scope="**/*.py"
+        )
+
+        assert len(result["affected_files"]) == 10
+
+        # 尝试 apply，但约束很严格
+        plan = ExecutionPlan(
+            limits=ExecutionLimits(max_files=3),
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
+        )
+
+        with pytest.raises(ConstraintViolationError) as exc:
+            tool.apply_edit(result["patch_id"], plan)
+
+        assert exc.value.constraint_type == "max_files"
+        assert exc.value.actual == 10
+        assert exc.value.limit == 3
+
+        # 验证: 没有文件被修改
+        for i in range(10):
+            content = (tmp_path / f"file{i}.py").read_text()
+            assert content == "import os\n"
+
+    def test_rollback_and_repropose(self, tmp_path):
+        """
+        Test 6.5: 回滚后重新提议
+        Given: apply 成功但需要回滚
+        When: 回滚后重新 propose 和 apply
+        Then: 可以正常进行新的编辑流程
+        """
+        # Setup
+        file = tmp_path / "main.py"
+        file.write_text("old_name\n")
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # 第一次编辑流程
+        result1 = tool.propose_edit("old_name", "wrong_name", "**/*.py")
+        apply_result1 = tool.apply_edit(result1["patch_id"])
+
+        assert file.read_text() == "wrong_name\n"
+
+        # 回滚
+        tool.rollback(apply_result1["rollback_id"])
+        assert file.read_text() == "old_name\n"
+
+        # 第二次编辑流程（正确的修改）
+        result2 = tool.propose_edit("old_name", "correct_name", "**/*.py")
+        apply_result2 = tool.apply_edit(result2["patch_id"])
+
+        assert file.read_text() == "correct_name\n"
+        assert apply_result2["success"] is True
+
+
+# DoD 1 验收标准：
+# ✅ 基于工作目录（包含 unstaged/staged/untracked）
+# ✅ 生成 unified diff 格式
+# ✅ 支持多文件批量预览
+# ✅ 支持复杂正则 pattern
+# ✅ patch_id 可检索
+# ✅ 不修改任何文件
+
+# DoD 2 验收标准:
+# ✅ 验证 patch_id 有效性
+# ✅ 应用 patch 到工作目录
+# ✅ 不接受 pattern/replacement（物理删除错误路径）
+# ✅ Patch 只能 apply 一次
+# ✅ 多文件原子性应用
+# ✅ 检测文件变更冲突（Patch 过期）
+
+# DoD 3 验收标准:
+# ✅ max_files 约束执行
+# ✅ max_changes 约束执行
+# ✅ timeout 约束执行
+# ✅ dry_run 模式支持
+# ✅ 约束违规在写入前检查（不污染文件）
+
+# DoD 4 验收标准:
+# ✅ 写入失败自动回滚
+# ✅ 手动回滚支持
+# ✅ RollbackManager 集成
+# ✅ 部分失败全部回滚（原子性）
+# ✅ 回滚后文件内容完全恢复
+
+# DoD 5 验收标准:
+# ✅ ProposeEditTool MCP 接口正确
+# ✅ ApplyEditTool MCP 接口正确
+# ✅ 返回 JSON 格式结果
+# ✅ 错误处理返回信息字符串
+
+# DoD 6 验收标准:
+# ✅ 端到端编辑流程
+# ✅ 用户修改冲突检测
+# ✅ 大规模重构场景
+# ✅ 约束防止失控
+# ✅ 回滚后重新提议
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
