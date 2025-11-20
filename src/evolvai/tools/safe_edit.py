@@ -246,8 +246,39 @@ class SafeEditTool:
         # 2. 检查 patch 是否已经应用过
         if patch.applied:
             raise PatchAlreadyAppliedError(f"Patch '{patch_id}' has already been applied")
-        
-        # 3. 检查文件是否在 propose 后被修改（过期检测）
+
+        # 3. ExecutionPlan 约束检查（在任何修改之前）
+        if execution_plan is not None:
+            # 3.1 检查 max_files 约束
+            num_files = len(patch.affected_files)
+            if num_files > execution_plan.limits.max_files:
+                raise ConstraintViolationError(
+                    f"Patch affects {num_files} files, exceeding limit of {execution_plan.limits.max_files}",
+                    constraint_type="max_files",
+                    limit=execution_plan.limits.max_files,
+                    actual=num_files
+                )
+
+            # 3.2 检查 max_changes 约束
+            total_changes = self._count_changes(patch)
+            if total_changes > execution_plan.limits.max_changes:
+                raise ConstraintViolationError(
+                    f"Patch contains {total_changes} changes, exceeding limit of {execution_plan.limits.max_changes}",
+                    constraint_type="max_changes",
+                    limit=execution_plan.limits.max_changes,
+                    actual=total_changes
+                )
+
+            # 3.3 检查 dry_run 模式
+            if execution_plan.dry_run:
+                return {
+                    "success": True,
+                    "dry_run": True,
+                    "rollback_id": None,
+                    "modified_files": patch.affected_files
+                }
+
+        # 4. 检查文件是否在 propose 后被修改（过期检测）
         for change in patch.changes:
             file_path = self.project_root / change["file"]
             if file_path.exists():
@@ -340,6 +371,20 @@ class SafeEditTool:
         hash_input = f"{patch_id}_{timestamp}"
         hash_value = hashlib.sha256(hash_input.encode()).hexdigest()[:8]
         return f"rollback_{timestamp}_{hash_value}"
+
+    def _count_changes(self, patch: PatchContent) -> int:
+        """
+        计算 patch 中的变更数量
+
+        通过计算 unified diff 中的 +/- 行数来统计
+        """
+        changes = 0
+        for line in patch.unified_diff.split('\n'):
+            # 计算以 + 或 - 开头的行（但排除 +++ 和 ---）
+            if (line.startswith('+') and not line.startswith('+++')) or \
+               (line.startswith('-') and not line.startswith('---')):
+                changes += 1
+        return changes
 
 
 # 导出
