@@ -99,7 +99,8 @@ class SafeEditTool:
             pattern: 搜索模式（正则表达式）
             replacement: 替换内容
             scope: 文件范围（glob pattern）
-            
+            **kwargs: 附加参数（存储到 metadata）
+
         Returns:
             dict: {
                 "patch_id": str,
@@ -343,6 +344,7 @@ class SafeEditTool:
 
         Raises:
             ValueError: rollback_id 不存在
+
         """
         # 检查内部存储
         if hasattr(self, '_rollback_store') and rollback_id in self._rollback_store:

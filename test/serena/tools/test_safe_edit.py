@@ -10,8 +10,7 @@ TDD Cycle 4: 回滚机制
 
 import inspect
 import subprocess
-import time
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -603,6 +602,155 @@ class TestRollbackMechanism:
 # ✅ RollbackManager 集成
 # ✅ 部分失败全部回滚（原子性）
 # ✅ 回滚后文件内容完全恢复
+
+class TestMCPToolIntegration:
+    """Cycle 5: MCP 工具暴露测试"""
+
+    @pytest.fixture
+    def mock_agent(self, tmp_path):
+        """Create a mock agent for MCP tool testing"""
+        agent = Mock()
+        agent.get_project_root = Mock(return_value=str(tmp_path))
+        return agent
+
+    def test_propose_edit_mcp_tool(self, tmp_path, mock_agent):
+        """
+        Test 5.1: ProposeEditTool MCP 接口
+        Given: AI 助手通过 MCP 调用
+        When: 调用 propose_edit
+        Then: 返回 JSON 格式结果，包含 patch_id, diff 等
+        """
+        import json
+
+        from serena.tools.patch_editor_tools import ProposeEditTool
+
+        # Setup: 创建测试文件
+        file = tmp_path / "main.py"
+        file.write_text("def old_func():\n    pass\n")
+
+        # Create tool with mock agent
+        tool = ProposeEditTool(mock_agent)
+
+        # Execute
+        result_str = tool.apply(
+            pattern="old_func",
+            replacement="new_func",
+            scope="**/*.py"
+        )
+
+        # Verify: 返回有效 JSON
+        result = json.loads(result_str)
+
+        assert result["success"] is True
+        assert result["patch_id"] is not None
+        assert "old_func" in result["unified_diff"]
+        assert "new_func" in result["unified_diff"]
+        assert "main.py" in result["affected_files"]
+        assert "files_modified" in result["statistics"]
+
+        # Verify: 文件未修改
+        assert file.read_text() == "def old_func():\n    pass\n"
+
+    def test_apply_edit_mcp_tool(self, tmp_path, mock_agent):
+        """
+        Test 5.2: ApplyEditTool MCP 接口
+        Given: 已有 propose_edit 的 patch_id
+        When: 调用 apply_edit
+        Then: 返回 JSON 格式结果，文件被修改
+        """
+        import json
+
+        from serena.tools.patch_editor_tools import ApplyEditTool, ProposeEditTool
+
+        # Setup: 创建测试文件
+        file = tmp_path / "main.py"
+        file.write_text("def old_func():\n    pass\n")
+
+        # First: propose
+        propose_tool = ProposeEditTool(mock_agent)
+        propose_result_str = propose_tool.apply(
+            pattern="old_func",
+            replacement="new_func",
+            scope="**/*.py"
+        )
+        propose_result = json.loads(propose_result_str)
+        patch_id = propose_result["patch_id"]
+
+        # Execute: apply
+        apply_tool = ApplyEditTool(mock_agent)
+        result_str = apply_tool.apply(
+            patch_id=patch_id,
+            max_files=10,
+            max_changes=50
+        )
+
+        # Verify: 返回有效 JSON
+        result = json.loads(result_str)
+
+        assert result["success"] is True
+        assert "main.py" in result["modified_files"]
+
+        # Verify: 文件已修改
+        assert "new_func" in file.read_text()
+
+    def test_mcp_tool_error_handling(self, mock_agent):
+        """
+        Test 5.3: MCP 工具错误处理
+        Given: 无效的 patch_id
+        When: 调用 apply_edit
+        Then: 返回错误信息字符串
+        """
+        from serena.tools.patch_editor_tools import ApplyEditTool
+
+        # Create tool with mock agent
+        apply_tool = ApplyEditTool(mock_agent)
+
+        # Execute with invalid patch_id
+        result_str = apply_tool.apply(
+            patch_id="invalid_patch_123",
+            max_files=10,
+            max_changes=50
+        )
+
+        # Verify: 返回错误信息
+        assert "Error" in result_str or "error" in result_str.lower()
+
+
+# DoD 1 验收标准：
+# ✅ 基于工作目录（包含 unstaged/staged/untracked）
+# ✅ 生成 unified diff 格式
+# ✅ 支持多文件批量预览
+# ✅ 支持复杂正则 pattern
+# ✅ patch_id 可检索
+# ✅ 不修改任何文件
+
+# DoD 2 验收标准:
+# ✅ 验证 patch_id 有效性
+# ✅ 应用 patch 到工作目录
+# ✅ 不接受 pattern/replacement（物理删除错误路径）
+# ✅ Patch 只能 apply 一次
+# ✅ 多文件原子性应用
+# ✅ 检测文件变更冲突（Patch 过期）
+
+# DoD 3 验收标准:
+# ✅ max_files 约束执行
+# ✅ max_changes 约束执行
+# ✅ timeout 约束执行
+# ✅ dry_run 模式支持
+# ✅ 约束违规在写入前检查（不污染文件）
+
+# DoD 4 验收标准:
+# ✅ 写入失败自动回滚
+# ✅ 手动回滚支持
+# ✅ RollbackManager 集成
+# ✅ 部分失败全部回滚（原子性）
+# ✅ 回滚后文件内容完全恢复
+
+# DoD 5 验收标准:
+# ✅ ProposeEditTool MCP 接口正确
+# ✅ ApplyEditTool MCP 接口正确
+# ✅ 返回 JSON 格式结果
+# ✅ 错误处理返回信息字符串
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
