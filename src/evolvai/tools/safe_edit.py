@@ -327,12 +327,40 @@ class SafeEditTool:
             }
             
         except Exception as e:
-            # 发生错误时回滚所有已修改的文件
+            # 发生错误时回滚所有已修改的文件（只回滚实际成功写入的）
+            for file_name in modified_files:
+                if file_name in backups:
+                    file_path = self.project_root / file_name
+                    file_path.write_text(backups[file_name])
+            raise ApplyError(f"Apply failed: {e}")
+
+    def rollback(self, rollback_id: str) -> None:
+        """
+        手动回滚到之前的状态
+
+        Args:
+            rollback_id: apply_edit 返回的 rollback_id
+
+        Raises:
+            ValueError: rollback_id 不存在
+        """
+        # 检查内部存储
+        if hasattr(self, '_rollback_store') and rollback_id in self._rollback_store:
+            backups = self._rollback_store[rollback_id]
             for file_name, original_content in backups.items():
                 file_path = self.project_root / file_name
                 file_path.write_text(original_content)
-            raise ApplyError(f"Apply failed: {e}")
-    
+            # 删除已使用的备份
+            del self._rollback_store[rollback_id]
+            return
+
+        # 检查外部 rollback_manager
+        if self.rollback_manager is not None:
+            self.rollback_manager.restore_backup(rollback_id)
+            return
+
+        raise ValueError(f"Rollback ID '{rollback_id}' not found")
+
     def _get_patch(self, patch_id: str) -> Optional[dict[str, Any]]:
         """
         获取 Patch 详情

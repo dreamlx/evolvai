@@ -3,6 +3,7 @@ Story 2.2: safe_edit TDD Tests
 TDD Cycle 1: propose_edit 核心功能
 TDD Cycle 2: apply_edit 核心功能
 TDD Cycle 3: ExecutionPlan 集成
+TDD Cycle 4: 回滚机制
 
 架构决策: ADR-006 - 基于工作目录操作，不使用Git worktree
 """
@@ -10,6 +11,7 @@ TDD Cycle 3: ExecutionPlan 集成
 import inspect
 import subprocess
 import time
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -20,6 +22,7 @@ from evolvai.core.execution_plan import (
     RollbackStrategyType,
 )
 from evolvai.tools.safe_edit import (
+    ApplyError,
     ConstraintViolationError,
     PatchAlreadyAppliedError,
     PatchNotFoundError,
@@ -459,6 +462,118 @@ class TestExecutionPlanIntegration:
         assert file.read_text() == "old\n"  # 文件未修改
 
 
+class TestRollbackMechanism:
+    """Cycle 4: 回滚机制测试"""
+    
+    def test_apply_failure_triggers_rollback(self, tmp_path):
+        """
+        Test 4.1: 基础回滚流程
+        Given: apply 过程中发生错误
+        When: 写入失败
+        Then: 自动回滚，文件恢复原始内容
+        """
+        # Setup: 创建两个文件，第二个设为只读来模拟写入失败
+        file = tmp_path / "a.py"
+        file.write_text("old\n")
+
+        file2 = tmp_path / "b.py"
+        file2.write_text("old\n")
+        file2.chmod(0o444)  # 设为只读
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Propose (会影响两个文件)
+        result = tool.propose_edit("old", "new", "**/*.py")
+
+        try:
+            with pytest.raises(ApplyError):
+                tool.apply_edit(result["patch_id"])
+
+            # Verify: 第一个文件被回滚到原始状态
+            assert file.read_text() == "old\n"
+        finally:
+            # 清理：恢复文件权限
+            file2.chmod(0o644)
+    
+    def test_manual_rollback(self, tmp_path):
+        """
+        Test 4.2: 手动回滚
+        Given: apply 成功完成
+        When: 用户调用 rollback(rollback_id)
+        Then: 文件恢复到 apply 前的状态
+        """
+        # Setup
+        file = tmp_path / "main.py"
+        file.write_text("old\n")
+        
+        tool = SafeEditTool(project_root=tmp_path)
+        
+        # Apply
+        result = tool.propose_edit("old", "new", "**/*.py")
+        apply_result = tool.apply_edit(result["patch_id"])
+        
+        assert file.read_text() == "new\n"  # 已修改
+        
+        # Rollback
+        tool.rollback(apply_result["rollback_id"])
+        
+        # Verify: 恢复原始内容
+        assert file.read_text() == "old\n"
+    
+    def test_rollback_manager_integration(self, tmp_path):
+        """
+        Test 4.3: RollbackManager 集成
+        Given: 使用 RollbackManager 创建备份
+        When: apply_edit
+        Then: RollbackManager 的 API 被正确调用
+        """
+        # Setup
+        file = tmp_path / "main.py"
+        file.write_text("old\n")
+        
+        # Mock RollbackManager
+        mock_rollback = Mock()
+        mock_rollback.save_backup = Mock()
+        
+        tool = SafeEditTool(project_root=tmp_path, rollback_manager=mock_rollback)
+        
+        # Execute
+        result = tool.propose_edit("old", "new", "**/*.py")
+        tool.apply_edit(result["patch_id"])
+        
+        # Verify: RollbackManager 被调用
+        mock_rollback.save_backup.assert_called_once()
+    
+    def test_partial_failure_rollback(self, tmp_path):
+        """
+        Test 4.4: 部分失败回滚
+        Given: 多文件 apply，第二个文件失败
+        When: 写入部分成功
+        Then: 所有文件回滚（包括已成功的）
+        """
+        # Setup: 创建两个文件，第二个设为只读
+        file_a = tmp_path / "a.py"
+        file_b = tmp_path / "b.py"
+        file_a.write_text("old\n")
+        file_b.write_text("old\n")
+        file_b.chmod(0o444)  # 设为只读
+
+        tool = SafeEditTool(project_root=tmp_path)
+
+        # Propose
+        result = tool.propose_edit("old", "new", "**/*.py")
+
+        try:
+            with pytest.raises(ApplyError):
+                tool.apply_edit(result["patch_id"])
+
+            # Verify: 第一个文件被回滚（已成功但被回滚）
+            assert file_a.read_text() == "old\n"
+        finally:
+            # 清理：恢复文件权限
+            file_b.chmod(0o644)
+
+
 # DoD 1 验收标准：
 # ✅ 基于工作目录（包含 unstaged/staged/untracked）
 # ✅ 生成 unified diff 格式
@@ -481,6 +596,13 @@ class TestExecutionPlanIntegration:
 # ✅ timeout 约束执行
 # ✅ dry_run 模式支持
 # ✅ 约束违规在写入前检查（不污染文件）
+
+# DoD 4 验收标准:
+# ✅ 写入失败自动回滚
+# ✅ 手动回滚支持
+# ✅ RollbackManager 集成
+# ✅ 部分失败全部回滚（原子性）
+# ✅ 回滚后文件内容完全恢复
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
