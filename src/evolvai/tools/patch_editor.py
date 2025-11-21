@@ -4,6 +4,7 @@ propose → diff → apply架构
 """
 
 import hashlib
+import json
 import re
 import shutil
 import subprocess
@@ -71,7 +72,41 @@ class PatchEditor:
 
         """
         self.project_root = project_root or Path.cwd()
-        self.patch_store: dict[str, PatchContent] = {}
+        # 使用基于文件的持久化存储，确保不同实例可以共享 patch
+        self._patch_store_path = self.project_root / ".evolvai" / "patches"
+        self._patch_store_path.mkdir(parents=True, exist_ok=True)
+
+    def _save_patch(self, patch: PatchContent) -> None:
+        """Save patch to file-based store"""
+        patch_file = self._patch_store_path / f"{patch.patch_id}.json"
+        data = {
+            "patch_id": patch.patch_id,
+            "unified_diff": patch.unified_diff,
+            "affected_files": patch.affected_files,
+            "created_at": patch.created_at.isoformat(),
+            "metadata": patch.metadata
+        }
+        patch_file.write_text(json.dumps(data, indent=2))
+
+    def _load_patch(self, patch_id: str) -> Optional[PatchContent]:
+        """Load patch from file-based store"""
+        patch_file = self._patch_store_path / f"{patch_id}.json"
+        if not patch_file.exists():
+            return None
+        data = json.loads(patch_file.read_text())
+        return PatchContent(
+            patch_id=data["patch_id"],
+            unified_diff=data["unified_diff"],
+            affected_files=data["affected_files"],
+            created_at=datetime.fromisoformat(data["created_at"]),
+            metadata=data["metadata"]
+        )
+
+    def _delete_patch(self, patch_id: str) -> None:
+        """Delete patch from file-based store"""
+        patch_file = self._patch_store_path / f"{patch_id}.json"
+        if patch_file.exists():
+            patch_file.unlink()
 
     def propose_edit(
         self,
@@ -162,7 +197,7 @@ class PatchEditor:
             "replacement": replacement
         }
         
-        # 4. 保存到patch_store
+        # 4. 保存到持久化存储
         patch_content = PatchContent(
             patch_id=patch_id,
             unified_diff=unified_diff_text,
@@ -175,7 +210,7 @@ class PatchEditor:
                 "replacement": replacement
             }
         )
-        self.patch_store[patch_id] = patch_content
+        self._save_patch(patch_content)
         
         # 5. 返回结果
         return ProposalResult(
@@ -210,10 +245,9 @@ class PatchEditor:
 
         """
         # 1. 验证patch存在
-        if patch_id not in self.patch_store:
+        patch_content = self._load_patch(patch_id)
+        if patch_content is None:
             raise PatchNotFoundError(f"Patch '{patch_id}' not found")
-
-        patch_content = self.patch_store[patch_id]
 
         # 2. ExecutionPlan约束检查
         if execution_plan is not None:

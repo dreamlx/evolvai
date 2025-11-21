@@ -40,7 +40,7 @@ class TestBatchEditParameterSchema:
         pattern_param = params["pattern"]
         assert pattern_param.default == inspect.Parameter.empty, \
             "pattern should be required (no default)"
-        assert pattern_param.annotation == str, \
+        assert pattern_param.annotation is str, \
             f"pattern should be typed as str, got {pattern_param.annotation}"
 
         # Verify replacement is required and typed as str
@@ -48,7 +48,7 @@ class TestBatchEditParameterSchema:
         replacement_param = params["replacement"]
         assert replacement_param.default == inspect.Parameter.empty, \
             "replacement should be required (no default)"
-        assert replacement_param.annotation == str, \
+        assert replacement_param.annotation is str, \
             f"replacement should be typed as str, got {replacement_param.annotation}"
         # TODO: Implement in Phase 1.2
 
@@ -76,7 +76,7 @@ class TestBatchEditParameterSchema:
         scope_param = params["scope"]
         assert scope_param.default == "**/*", \
             f"scope should default to '**/*', got {scope_param.default}"
-        assert scope_param.annotation == str, \
+        assert scope_param.annotation is str, \
             f"scope should be typed as str, got {scope_param.annotation}"
 
         # Verify preview has correct default
@@ -84,7 +84,7 @@ class TestBatchEditParameterSchema:
         preview_param = params["preview"]
         assert preview_param.default is False, \
             f"preview should default to False, got {preview_param.default}"
-        assert preview_param.annotation == bool, \
+        assert preview_param.annotation is bool, \
             f"preview should be typed as bool, got {preview_param.annotation}"
         # TODO: Implement in Phase 1.2
 
@@ -162,7 +162,7 @@ class TestSafeSearchParameterSchema:
         query_param = params["query"]
         assert query_param.default == inspect.Parameter.empty, \
             "query should be required (no default)"
-        assert query_param.annotation == str, \
+        assert query_param.annotation is str, \
             f"query should be typed as str, got {query_param.annotation}"
         # TODO: Implement in Phase 1.2
 
@@ -190,7 +190,7 @@ class TestSafeSearchParameterSchema:
         area_selector_param = params["area_selector"]
         assert area_selector_param.default == "auto", \
             f"area_selector should default to 'auto', got {area_selector_param.default}"
-        assert area_selector_param.annotation == str, \
+        assert area_selector_param.annotation is str, \
             f"area_selector should be typed as str, got {area_selector_param.annotation}"
         # TODO: Implement in Phase 1.2
 
@@ -218,7 +218,7 @@ class TestSafeSearchParameterSchema:
         mode_param = params["mode"]
         assert mode_param.default == "balanced", \
             f"mode should default to 'balanced', got {mode_param.default}"
-        assert mode_param.annotation == str, \
+        assert mode_param.annotation is str, \
             f"mode should be typed as str, got {mode_param.annotation}"
         # TODO: Implement in Phase 1.2
 

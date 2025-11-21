@@ -186,6 +186,7 @@ select = [
 ignore = [
   "PLC0415",
   "RUF002",
+  "RUF003",  # Allow fullwidth Chinese punctuation in comments
   "RUF005",
   "RUF059",
   "SIM118",
