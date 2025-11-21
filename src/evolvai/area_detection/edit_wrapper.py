@@ -21,25 +21,20 @@ from .rollback_manager import RollbackManager
 
 class SafeEditWrapper:
     """安全编辑包装器（Story 2.2简化版）
-    
+
     核心功能：
     1. 原子性文件写入（temp file + atomic replace）
     2. 自动回滚安全网（RollbackManager集成）
     3. 批量编辑支持（safe_edit_batch）
     4. 性能指标追踪（TPST优化）
-    
+
     设计原则：
     - 信任AI生成的代码质量
     - 失败时通过回滚恢复
     - 避免过度验证导致的token浪费
     """
 
-    def __init__(
-        self,
-        agent: Any = None,
-        project: Any = None,
-        config: Optional[dict[str, Any]] = None
-    ):
+    def __init__(self, agent: Any = None, project: Any = None, config: Optional[dict[str, Any]] = None):
         """
         初始化安全编辑包装器
 
@@ -67,16 +62,10 @@ class SafeEditWrapper:
             "successful_edits": 0,
             "failed_edits": 0,
             "rollbacks_executed": 0,
-            "total_duration_ms": 0.0
+            "total_duration_ms": 0.0,
         }
 
-    def safe_edit(
-        self,
-        file_path: str,
-        content: str,
-        auto_rollback: bool = True,
-        **kwargs
-    ) -> dict[str, Any]:
+    def safe_edit(self, file_path: str, content: str, auto_rollback: bool = True, **kwargs) -> dict[str, Any]:
         """
         安全编辑文件（简化版 - Story 2.2）
 
@@ -133,7 +122,7 @@ class SafeEditWrapper:
                     rollback_info = {
                         "strategy": rollback_result["strategy"],
                         "rollback_hash": result["rollback_id"],
-                        "file_path": file_path
+                        "file_path": file_path,
                     }
                     self._execute_rollback(rollback_info)
                     self.performance_metrics["rollbacks_executed"] += 1
@@ -157,12 +146,7 @@ class SafeEditWrapper:
 
         return result
 
-    def safe_edit_batch(
-        self,
-        edits: list[dict[str, Any]],
-        stop_on_error: bool = True,
-        **kwargs
-    ) -> dict[str, Any]:
+    def safe_edit_batch(self, edits: list[dict[str, Any]], stop_on_error: bool = True, **kwargs) -> dict[str, Any]:
         """
         批量安全编辑（简化版 - Story 2.2）
 
@@ -179,12 +163,7 @@ class SafeEditWrapper:
         results = []
 
         for i, edit in enumerate(edits):
-            result = self.safe_edit(
-                file_path=edit["file_path"],
-                content=edit["content"],
-                auto_rollback=True,
-                **kwargs
-            )
+            result = self.safe_edit(file_path=edit["file_path"], content=edit["content"], auto_rollback=True, **kwargs)
 
             result["edit_index"] = i
             results.append(result)
@@ -199,18 +178,15 @@ class SafeEditWrapper:
             "successful_edits": sum(1 for r in results if r["success"]),
             "failed_edits": sum(1 for r in results if not r["success"]),
             "results": results,
-            "duration_ms": (time.time() - start_time) * 1000
+            "duration_ms": (time.time() - start_time) * 1000,
         }
 
     def rollback_edit(
-        self,
-        file_path: str,
-        backup_info: Optional[dict[str, Any]] = None,
-        strategy: Optional[RollbackStrategy] = None
+        self, file_path: str, backup_info: Optional[dict[str, Any]] = None, strategy: Optional[RollbackStrategy] = None
     ) -> dict[str, Any]:
         """
         回滚编辑操作（Story 2.2简化版）
-        
+
         支持两种回滚模式：
         1. 智能回滚：自动选择最近的回滚点
         2. 指定回滚：使用特定的backup_info和strategy
@@ -238,15 +214,9 @@ class SafeEditWrapper:
         else:
             # 使用指定的备份信息回滚
             if strategy == RollbackStrategy.GIT:
-                rollback_result = self._rollback_manager.git_rollback(
-                    backup_info["rollback_hash"],
-                    backup_info.get("message")
-                )
+                rollback_result = self._rollback_manager.git_rollback(backup_info["rollback_hash"], backup_info.get("message"))
             else:
-                rollback_result = self._rollback_manager.rollback_file_backup(
-                    backup_info["rollback_hash"],
-                    file_path
-                )
+                rollback_result = self._rollback_manager.rollback_file_backup(backup_info["rollback_hash"], file_path)
 
         if rollback_result.success:
             self.performance_metrics["rollbacks_executed"] += 1
@@ -256,7 +226,7 @@ class SafeEditWrapper:
             "strategy": rollback_result.strategy.value,
             "message": rollback_result.message,
             "error": rollback_result.error_message,
-            "duration_ms": rollback_result.duration_ms
+            "duration_ms": rollback_result.duration_ms,
         }
 
     def get_edit_statistics(self) -> dict[str, Any]:
@@ -271,21 +241,15 @@ class SafeEditWrapper:
 
         # 计算成功率
         if metrics["total_edits"] > 0:
-            metrics["success_rate"] = (
-                metrics["successful_edits"] / metrics["total_edits"]
-            )
-            metrics["average_duration_ms"] = (
-                metrics["total_duration_ms"] / metrics["total_edits"]
-            )
+            metrics["success_rate"] = metrics["successful_edits"] / metrics["total_edits"]
+            metrics["average_duration_ms"] = metrics["total_duration_ms"] / metrics["total_edits"]
         else:
             metrics["success_rate"] = 0.0
             metrics["average_duration_ms"] = 0.0
 
         # 添加回滚管理器性能指标
         if self._rollback_manager:
-            metrics["rollback_performance"] = (
-                self._rollback_manager.get_performance_metrics()
-            )
+            metrics["rollback_performance"] = self._rollback_manager.get_performance_metrics()
 
         return metrics
 
@@ -296,13 +260,9 @@ class SafeEditWrapper:
             if not path_obj.exists():
                 return ""  # 新文件
 
-            return path_obj.read_text(encoding='utf-8')
+            return path_obj.read_text(encoding="utf-8")
         except Exception as e:
-            raise EditValidationError(
-                error_type="FILE_READ_ERROR",
-                message=f"无法读取文件: {e!s}",
-                file_path=file_path
-            )
+            raise EditValidationError(error_type="FILE_READ_ERROR", message=f"无法读取文件: {e!s}", file_path=file_path)
 
     def _write_file(self, file_path: str, content: str) -> dict[str, Any]:
         """写入文件"""
@@ -312,15 +272,12 @@ class SafeEditWrapper:
 
             # 写入临时文件，然后原子性移动（避免部分写入）
             temp_file = path_obj.with_suffix(path_obj.suffix + ".tmp")
-            temp_file.write_text(content, encoding='utf-8')
+            temp_file.write_text(content, encoding="utf-8")
             temp_file.replace(path_obj)
 
             return {"success": True}
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"文件写入失败: {e!s}"
-            }
+            return {"success": False, "error": f"文件写入失败: {e!s}"}
 
     def _create_rollback_point(self, file_path: str, original_content: str) -> dict[str, Any]:
         """创建回滚点"""
@@ -335,7 +292,7 @@ class SafeEditWrapper:
             "rollback_hash": result.rollback_hash,
             "message": result.message,
             "error": result.error_message,
-            "duration_ms": result.duration_ms
+            "duration_ms": result.duration_ms,
         }
 
     def _execute_rollback(self, rollback_info: dict[str, Any]):
@@ -345,14 +302,11 @@ class SafeEditWrapper:
                 self._rollback_manager.git_rollback(rollback_info["rollback_hash"])
         else:
             if self._rollback_manager:
-                self._rollback_manager.rollback_file_backup(
-                    rollback_info["rollback_hash"],
-                    rollback_info["file_path"]
-                )
+                self._rollback_manager.rollback_file_backup(rollback_info["rollback_hash"], rollback_info["file_path"])
 
     def _send_edit_feedback(self, file_path: str, validation_results: dict[str, Any], mode: str):
         """发送编辑反馈（已废弃 - Story 2.2移除）
-        
+
         保留此方法仅为向后兼容，实际不再使用。
         """
         if not self.feedback_system:

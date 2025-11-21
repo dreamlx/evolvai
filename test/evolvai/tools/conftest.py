@@ -4,6 +4,7 @@ MCP Tools Testing - Shared Fixtures
 Provides common fixtures for MCP tool testing to ensure test isolation
 and reduce code duplication.
 """
+
 from unittest.mock import Mock
 
 import pytest
@@ -80,6 +81,6 @@ def go_project(tmp_path):
             result = tool.apply(query="func main")
 
     """
-    (tmp_path / "main.go").write_text("package main\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n")
+    (tmp_path / "main.go").write_text('package main\n\nfunc main() {\n\tprintln("Hello")\n}\n')
     (tmp_path / "handler.go").write_text("package main\n\nfunc handleRequest() {\n\t// handler\n}\n")
     return tmp_path

@@ -8,6 +8,7 @@ Dimension 6: 验证 ExecutionPlan 约束在 MCP 层正确传递和执行
 - 约束验证在核心层执行
 - 违规时返回明确错误
 """
+
 from unittest.mock import patch
 
 
@@ -47,33 +48,20 @@ class TestBatchEditExecutionPlan:
             mock_editor_instance = MockBatchEditor.return_value
             # Configure mock to return a valid result
             from evolvai.tools.batch_editor import BatchEditResult
+
             mock_editor_instance.batch_edit.return_value = BatchEditResult(
-                success=True,
-                affected_files=[],
-                changes_count=0,
-                unified_diff="",
-                rollback_id=None,
-                error_message=None,
-                duration_ms=0.0
+                success=True, affected_files=[], changes_count=0, unified_diff="", rollback_id=None, error_message=None, duration_ms=0.0
             )
 
             # Create tool and execute with ExecutionPlan
             tool = BatchEditTool(mock_agent)
-            tool.apply(
-                pattern="old_value",
-                replacement="new_value",
-                scope="**/*.py",
-                preview=True,
-                execution_plan=plan
-            )
+            tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True, execution_plan=plan)
 
             # Verify BatchEditor.batch_edit was called with execution_plan
             mock_editor_instance.batch_edit.assert_called_once()
             call_kwargs = mock_editor_instance.batch_edit.call_args.kwargs
-            assert "execution_plan" in call_kwargs, \
-                "batch_edit should receive execution_plan parameter"
-            assert call_kwargs["execution_plan"] is plan, \
-                "execution_plan should be passed unchanged to BatchEditor"
+            assert "execution_plan" in call_kwargs, "batch_edit should receive execution_plan parameter"
+            assert call_kwargs["execution_plan"] is plan, "execution_plan should be passed unchanged to BatchEditor"
         # TODO: Implement in Phase 2.3
 
     def test_max_files_constraint_enforced(self, simple_project, mock_agent):
@@ -113,24 +101,18 @@ class TestBatchEditExecutionPlan:
 
         # Create tool and execute with constraint
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=True,
-            execution_plan=plan
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True, execution_plan=plan)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
 
         # Verify constraint violation
-        assert result["success"] is False, \
-            "Should fail when exceeding max_files constraint"
+        assert result["success"] is False, "Should fail when exceeding max_files constraint"
         assert "error_message" in result, "Should include error message"
         error_msg = result["error_message"].lower()
-        assert "max_files" in error_msg or "constraint" in error_msg or "limit" in error_msg, \
-            f"Error should mention max_files constraint, got: {result['error_message']}"
+        assert (
+            "max_files" in error_msg or "constraint" in error_msg or "limit" in error_msg
+        ), f"Error should mention max_files constraint, got: {result['error_message']}"
         # TODO: Implement in Phase 2.3
 
     def test_max_changes_constraint_enforced(self, simple_project, mock_agent):
@@ -157,13 +139,15 @@ class TestBatchEditExecutionPlan:
 
         # Create a file with 5 occurrences of the pattern
         test_file = simple_project / "many_matches.py"
-        test_file.write_text("""
+        test_file.write_text(
+            """
 old_value = 1
 old_value = 2
 old_value = 3
 old_value = 4
 old_value = 5
-""")
+"""
+        )
 
         # Update mock_agent to return simple_project path
         mock_agent.get_project_root.return_value = str(simple_project)
@@ -176,24 +160,18 @@ old_value = 5
 
         # Create tool and execute with constraint
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=True,
-            execution_plan=plan
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True, execution_plan=plan)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
 
         # Verify constraint violation
-        assert result["success"] is False, \
-            "Should fail when exceeding max_changes constraint"
+        assert result["success"] is False, "Should fail when exceeding max_changes constraint"
         assert "error_message" in result, "Should include error message"
         error_msg = result["error_message"].lower()
-        assert "max_changes" in error_msg or "constraint" in error_msg or "limit" in error_msg, \
-            f"Error should mention max_changes constraint, got: {result['error_message']}"
+        assert (
+            "max_changes" in error_msg or "constraint" in error_msg or "limit" in error_msg
+        ), f"Error should mention max_changes constraint, got: {result['error_message']}"
         # TODO: Implement in Phase 2.3
 
     def test_execution_plan_optional(self, simple_project, mock_agent):
@@ -220,7 +198,7 @@ old_value = 5
             pattern="old_value",
             replacement="new_value",
             scope="**/*.py",
-            preview=True
+            preview=True,
             # Note: No execution_plan parameter
         )
 
@@ -229,11 +207,9 @@ old_value = 5
 
         # Verify operation succeeded without execution_plan
         assert "success" in result, "Missing 'success' field"
-        assert result["success"] is True, \
-            f"Should succeed without execution_plan, got: {result.get('error_message', 'N/A')}"
+        assert result["success"] is True, f"Should succeed without execution_plan, got: {result.get('error_message', 'N/A')}"
 
         # Verify normal operation - affected files found
         assert "affected_files" in result, "Missing 'affected_files' field"
-        assert len(result["affected_files"]) > 0, \
-            "Should find affected files when execution_plan is omitted"
+        assert len(result["affected_files"]) > 0, "Should find affected files when execution_plan is omitted"
         # TODO: Implement in Phase 2.3

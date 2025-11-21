@@ -72,7 +72,7 @@ class BatchEditor:
         preview: bool = False,
         execution_plan: Optional[ExecutionPlan] = None,
     ) -> BatchEditResult:
-        """批量编辑文件
+        r"""批量编辑文件
 
         Args:
             pattern: 正则表达式搜索模式
@@ -170,9 +170,7 @@ class BatchEditor:
         # 仅返回文件，不包括目录
         return [f for f in files if f.is_file()]
 
-    def _generate_changes(
-        self, files: list[Path], regex: re.Pattern, replacement: str
-    ) -> list[FileChange]:
+    def _generate_changes(self, files: list[Path], regex: re.Pattern, replacement: str) -> list[FileChange]:
         """生成文件变更列表
 
         Args:
@@ -187,7 +185,7 @@ class BatchEditor:
         changes = []
         for file_path in files:
             try:
-                original_content = file_path.read_text(encoding='utf-8')
+                original_content = file_path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, PermissionError):
                 # 跳过无法读取的文件（二进制文件、无权限等）
                 continue
@@ -236,9 +234,7 @@ class BatchEditor:
 
         return "\n".join(diff_lines)
 
-    def _check_constraints(
-        self, changes: list[FileChange], plan: ExecutionPlan
-    ) -> Optional[str]:
+    def _check_constraints(self, changes: list[FileChange], plan: ExecutionPlan) -> Optional[str]:
         """检查ExecutionPlan约束
 
         Args:
@@ -261,9 +257,7 @@ class BatchEditor:
         total_changes = sum(change.match_count for change in changes)
         if total_changes > plan.limits.max_changes:
             return (
-                f"ExecutionPlan constraint violation: "
-                f"Attempting {total_changes} changes, "
-                f"but max_changes={plan.limits.max_changes}"
+                f"ExecutionPlan constraint violation: " f"Attempting {total_changes} changes, " f"but max_changes={plan.limits.max_changes}"
             )
 
         return None
@@ -305,7 +299,7 @@ class BatchEditor:
             for change in changes:
                 # 写入临时文件，然后原子性移动
                 temp_file = change.file_path.with_suffix(change.file_path.suffix + ".tmp")
-                temp_file.write_text(change.new_content, encoding='utf-8')
+                temp_file.write_text(change.new_content, encoding="utf-8")
                 temp_file.replace(change.file_path)
         except Exception as e:
             # 写入失败，抛出异常让上层处理回滚
@@ -330,10 +324,7 @@ class BatchEditor:
 
             try:
                 # 使用精确的rollback_hash恢复文件
-                result = self.rollback_manager.rollback_file_backup(
-                    change.rollback_hash,
-                    str(change.file_path)
-                )
+                result = self.rollback_manager.rollback_file_backup(change.rollback_hash, str(change.file_path))
                 if not result.success:
                     # 记录失败但继续其他文件
                     pass

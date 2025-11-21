@@ -32,7 +32,7 @@ from evolvai.tools.safe_edit import (
 
 class TestProposalCore:
     """Cycle 1: propose_edit 核心功能测试"""
-    
+
     def test_propose_edit_basic_flow(self, tmp_path):
         """
         Test 1.1: 基础 propose 流程
@@ -43,24 +43,20 @@ class TestProposalCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("def old_func():\n    pass\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute
-        result = tool.propose_edit(
-            pattern="old_func",
-            replacement="new_func",
-            scope="**/*.py"
-        )
-        
+        result = tool.propose_edit(pattern="old_func", replacement="new_func", scope="**/*.py")
+
         # Verify
         assert result["patch_id"] is not None
         assert "old_func" in result["unified_diff"]
         assert "new_func" in result["unified_diff"]
-        
+
         # 关键: 文件未修改
         assert file.read_text() == "def old_func():\n    pass\n"
-    
+
     def test_propose_based_on_working_directory(self, tmp_path):
         """
         Test 1.2: 基于工作目录（包含 unstaged 修改）
@@ -72,31 +68,27 @@ class TestProposalCore:
         subprocess.run(["git", "init"], check=False, cwd=tmp_path, capture_output=True)
         subprocess.run(["git", "config", "user.email", "test@test.com"], check=False, cwd=tmp_path, capture_output=True)
         subprocess.run(["git", "config", "user.name", "Test"], check=False, cwd=tmp_path, capture_output=True)
-        
+
         file = tmp_path / "main.py"
-        
+
         # 1. 提交初始版本
         file.write_text("version = '1.0'\n")
         subprocess.run(["git", "add", "main.py"], check=False, cwd=tmp_path, capture_output=True)
         subprocess.run(["git", "commit", "-m", "Initial"], check=False, cwd=tmp_path, capture_output=True)
-        
+
         # 2. 修改文件（unstaged）
         file.write_text("version = '2.0'\n")  # ← unstaged 修改
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute
-        result = tool.propose_edit(
-            pattern="version = '2.0'",
-            replacement="version = '3.0'",
-            scope="**/*.py"
-        )
-        
+        result = tool.propose_edit(pattern="version = '2.0'", replacement="version = '3.0'", scope="**/*.py")
+
         # Verify: diff 基于工作目录（2.0 → 3.0），不是 HEAD（1.0）
         assert "version = '2.0'" in result["unified_diff"]  # from
         assert "version = '3.0'" in result["unified_diff"]  # to
         assert "version = '1.0'" not in result["unified_diff"]  # 不包含 HEAD
-    
+
     def test_propose_multiple_files(self, tmp_path):
         """
         Test 1.3: 多文件批量预览
@@ -108,22 +100,18 @@ class TestProposalCore:
         (tmp_path / "a.py").write_text("name = 'old'\n")
         (tmp_path / "b.py").write_text("name = 'old'\n")
         (tmp_path / "c.txt").write_text("name = 'old'\n")  # 不匹配 scope
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute
-        result = tool.propose_edit(
-            pattern="old",
-            replacement="new",
-            scope="**/*.py"
-        )
-        
+        result = tool.propose_edit(pattern="old", replacement="new", scope="**/*.py")
+
         # Verify
         assert set(result["affected_files"]) == {"a.py", "b.py"}  # 不包含 c.txt
         assert result["statistics"]["files_modified"] == 2
         assert "a.py" in result["unified_diff"]
         assert "b.py" in result["unified_diff"]
-    
+
     def test_propose_no_matches(self, tmp_path):
         """
         Test 1.4: 无匹配时返回空
@@ -134,21 +122,17 @@ class TestProposalCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("def func():\n    pass\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute
-        result = tool.propose_edit(
-            pattern="nonexistent",
-            replacement="new",
-            scope="**/*.py"
-        )
-        
+        result = tool.propose_edit(pattern="nonexistent", replacement="new", scope="**/*.py")
+
         # Verify
         assert result["affected_files"] == []
         assert result["statistics"]["files_modified"] == 0
         assert result["unified_diff"] == ""
-    
+
     def test_propose_with_regex_pattern(self, tmp_path):
         """
         Test 1.5: 复杂正则 pattern
@@ -159,21 +143,19 @@ class TestProposalCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text('log.info("message")\nlog.debug("data")\n')
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute: 替换所有 log.X → logger.X
         result = tool.propose_edit(
-            pattern=r'log\.(\w+)\("(.*)"\)',
-            replacement=r'logger.\1("\2", extra={"timestamp": True})',
-            scope="**/*.py"
+            pattern=r'log\.(\w+)\("(.*)"\)', replacement=r'logger.\1("\2", extra={"timestamp": True})', scope="**/*.py"
         )
-        
+
         # Verify
         assert 'logger.info("message"' in result["unified_diff"]
         assert 'logger.debug("data"' in result["unified_diff"]
         assert 'extra={"timestamp": True}' in result["unified_diff"]
-    
+
     def test_patch_storage_and_retrieval(self, tmp_path):
         """
         Test 1.6: Patch 存储和检索
@@ -184,13 +166,13 @@ class TestProposalCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Execute
         result1 = tool.propose_edit("old", "new", "**/*.py")
         patch_id = result1["patch_id"]
-        
+
         # Verify: 可以检索 patch
         patch = tool._get_patch(patch_id)
         assert patch is not None
@@ -203,7 +185,7 @@ class TestProposalCore:
 
 class TestApplyCore:
     """Cycle 2: apply_edit 核心功能测试"""
-    
+
     def test_apply_edit_basic_flow(self, tmp_path):
         """
         Test 2.1: 基础 apply 流程
@@ -214,21 +196,21 @@ class TestApplyCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         propose_result = tool.propose_edit("old", "new", "**/*.py")
         patch_id = propose_result["patch_id"]
-        
+
         # Execute
         apply_result = tool.apply_edit(patch_id=patch_id)
-        
+
         # Verify
         assert apply_result["success"] is True
         assert apply_result["rollback_id"] is not None
         assert file.read_text() == "new\n"  # 文件已修改
-    
+
     def test_apply_invalid_patch_id(self, tmp_path):
         """
         Test 2.2: 无效 patch_id 拒绝
@@ -237,10 +219,10 @@ class TestApplyCore:
         Then: 抛出 PatchNotFoundError
         """
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         with pytest.raises(PatchNotFoundError):
             tool.apply_edit(patch_id="invalid-uuid")
-    
+
     def test_apply_does_not_accept_pattern_replacement(self, tmp_path):
         """
         Test 2.3: 不接受 pattern/replacement
@@ -249,13 +231,13 @@ class TestApplyCore:
         Then: 不包含 pattern/replacement 参数
         """
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Verify: apply_edit 签名只接受 patch_id 和 execution_plan
         sig = inspect.signature(tool.apply_edit)
         assert "patch_id" in sig.parameters
         assert "pattern" not in sig.parameters
         assert "replacement" not in sig.parameters
-    
+
     def test_patch_can_only_apply_once(self, tmp_path):
         """
         Test 2.4: Patch 只能 apply 一次
@@ -266,20 +248,20 @@ class TestApplyCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         result = tool.propose_edit("old", "new", "**/*.py")
         patch_id = result["patch_id"]
-        
+
         # First apply - OK
         tool.apply_edit(patch_id)
-        
+
         # Second apply - Error
         with pytest.raises(PatchAlreadyAppliedError):
             tool.apply_edit(patch_id)
-    
+
     def test_apply_multiple_files_atomic(self, tmp_path):
         """
         Test 2.5: 多文件原子性应用
@@ -292,19 +274,19 @@ class TestApplyCore:
         file_b = tmp_path / "b.py"
         file_a.write_text("old\n")
         file_b.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         result = tool.propose_edit("old", "new", "**/*.py")
-        
+
         # Apply
         tool.apply_edit(result["patch_id"])
-        
+
         # Verify: 两个文件都被修改
         assert file_a.read_text() == "new\n"
         assert file_b.read_text() == "new\n"
-    
+
     def test_apply_detects_file_changes(self, tmp_path):
         """
         Test 2.6: Patch 过期检测（文件变更冲突）
@@ -315,29 +297,29 @@ class TestApplyCore:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("version = '1.0'\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Step 1: Propose
         result = tool.propose_edit("1.0", "2.0", "**/*.py")
         patch_id = result["patch_id"]
-        
+
         # Step 2: 文件被修改（模拟用户或其他进程修改）
         file.write_text("version = '1.5'\n")  # 内容已变化
-        
+
         # Step 3: Apply - 应该检测到冲突
         with pytest.raises(PatchOutdatedError) as exc:
             tool.apply_edit(patch_id)
-        
+
         assert "has changed since propose_edit" in str(exc.value)
-        
+
         # Verify: 文件未被修改（保持用户的 1.5）
         assert file.read_text() == "version = '1.5'\n"
 
 
 class TestExecutionPlanIntegration:
     """Cycle 3: ExecutionPlan 集成测试"""
-    
+
     def test_execution_plan_max_files_constraint(self, tmp_path):
         """
         Test 3.1: max_files 约束
@@ -348,19 +330,16 @@ class TestExecutionPlanIntegration:
         # Setup: 创建 3 个文件
         for i in range(3):
             (tmp_path / f"file{i}.py").write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose (会影响 3 个文件)
         result = tool.propose_edit("old", "new", "**/*.py")
         assert len(result["affected_files"]) == 3
-        
+
         # Execute with constraint (max_files=2)
-        plan = ExecutionPlan(
-            limits=ExecutionLimits(max_files=2),
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
-        )
-        
+        plan = ExecutionPlan(limits=ExecutionLimits(max_files=2), rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP))
+
         with pytest.raises(ConstraintViolationError) as exc:
             tool.apply_edit(result["patch_id"], plan)
 
@@ -372,7 +351,7 @@ class TestExecutionPlanIntegration:
         assert (tmp_path / "file0.py").read_text() == "old\n"
         assert (tmp_path / "file1.py").read_text() == "old\n"
         assert (tmp_path / "file2.py").read_text() == "old\n"
-    
+
     def test_execution_plan_max_changes_constraint(self, tmp_path):
         """
         Test 3.2: max_changes 约束
@@ -383,18 +362,15 @@ class TestExecutionPlanIntegration:
         # Setup: 创建有多处匹配的文件（每行一个，确保多个变更）
         file = tmp_path / "main.py"
         file.write_text("\n".join(["old"] * 10) + "\n")  # 10 lines, 10 occurrences
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         result = tool.propose_edit("old", "new", "**/*.py")
-        
+
         # Execute with constraint (max_changes=5)
-        plan = ExecutionPlan(
-            limits=ExecutionLimits(max_changes=5),
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
-        )
-        
+        plan = ExecutionPlan(limits=ExecutionLimits(max_changes=5), rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP))
+
         with pytest.raises(ConstraintViolationError) as exc:
             tool.apply_edit(result["patch_id"], plan)
 
@@ -404,7 +380,7 @@ class TestExecutionPlanIntegration:
 
         # Verify: 文件未被修改
         assert file.read_text() == "\n".join(["old"] * 10) + "\n"
-    
+
     def test_execution_plan_timeout_constraint(self, tmp_path):
         """
         Test 3.3: timeout 约束
@@ -415,23 +391,22 @@ class TestExecutionPlanIntegration:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         result = tool.propose_edit("old", "new", "**/*.py")
-        
+
         # Execute with very short timeout
         plan = ExecutionPlan(
-            limits=ExecutionLimits(timeout_seconds=1),  # 最小值是1秒
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
+            limits=ExecutionLimits(timeout_seconds=1), rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)  # 最小值是1秒
         )
-        
+
         # 对于正常操作，1秒应该足够，所以这个测试主要验证timeout参数被接受
         # 实际timeout测试需要模拟慢速操作
         apply_result = tool.apply_edit(result["patch_id"], plan)
         assert apply_result["success"] is True
-    
+
     def test_execution_plan_dry_run_mode(self, tmp_path):
         """
         Test 3.4: dry_run 模式
@@ -442,19 +417,16 @@ class TestExecutionPlanIntegration:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Propose
         result = tool.propose_edit("old", "new", "**/*.py")
-        
+
         # Execute in dry_run mode
-        plan = ExecutionPlan(
-            dry_run=True,
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
-        )
+        plan = ExecutionPlan(dry_run=True, rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP))
         apply_result = tool.apply_edit(result["patch_id"], plan)
-        
+
         # Verify
         assert apply_result["success"] is True
         assert apply_result["dry_run"] is True
@@ -463,7 +435,7 @@ class TestExecutionPlanIntegration:
 
 class TestRollbackMechanism:
     """Cycle 4: 回滚机制测试"""
-    
+
     def test_apply_failure_triggers_rollback(self, tmp_path):
         """
         Test 4.1: 基础回滚流程
@@ -493,7 +465,7 @@ class TestRollbackMechanism:
         finally:
             # 清理：恢复文件权限
             file2.chmod(0o644)
-    
+
     def test_manual_rollback(self, tmp_path):
         """
         Test 4.2: 手动回滚
@@ -504,21 +476,21 @@ class TestRollbackMechanism:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         tool = SafeEditTool(project_root=tmp_path)
-        
+
         # Apply
         result = tool.propose_edit("old", "new", "**/*.py")
         apply_result = tool.apply_edit(result["patch_id"])
-        
+
         assert file.read_text() == "new\n"  # 已修改
-        
+
         # Rollback
         tool.rollback(apply_result["rollback_id"])
-        
+
         # Verify: 恢复原始内容
         assert file.read_text() == "old\n"
-    
+
     def test_rollback_manager_integration(self, tmp_path):
         """
         Test 4.3: RollbackManager 集成
@@ -529,20 +501,20 @@ class TestRollbackMechanism:
         # Setup
         file = tmp_path / "main.py"
         file.write_text("old\n")
-        
+
         # Mock RollbackManager
         mock_rollback = Mock()
         mock_rollback.save_backup = Mock()
-        
+
         tool = SafeEditTool(project_root=tmp_path, rollback_manager=mock_rollback)
-        
+
         # Execute
         result = tool.propose_edit("old", "new", "**/*.py")
         tool.apply_edit(result["patch_id"])
-        
+
         # Verify: RollbackManager 被调用
         mock_rollback.save_backup.assert_called_once()
-    
+
     def test_partial_failure_rollback(self, tmp_path):
         """
         Test 4.4: 部分失败回滚
@@ -603,6 +575,7 @@ class TestRollbackMechanism:
 # ✅ 部分失败全部回滚（原子性）
 # ✅ 回滚后文件内容完全恢复
 
+
 class TestMCPToolIntegration:
     """Cycle 5: MCP 工具暴露测试"""
 
@@ -632,11 +605,7 @@ class TestMCPToolIntegration:
         tool = ProposeEditTool(mock_agent)
 
         # Execute
-        result_str = tool.apply(
-            pattern="old_func",
-            replacement="new_func",
-            scope="**/*.py"
-        )
+        result_str = tool.apply(pattern="old_func", replacement="new_func", scope="**/*.py")
 
         # Verify: 返回有效 JSON
         result = json.loads(result_str)
@@ -668,21 +637,13 @@ class TestMCPToolIntegration:
 
         # First: propose
         propose_tool = ProposeEditTool(mock_agent)
-        propose_result_str = propose_tool.apply(
-            pattern="old_func",
-            replacement="new_func",
-            scope="**/*.py"
-        )
+        propose_result_str = propose_tool.apply(pattern="old_func", replacement="new_func", scope="**/*.py")
         propose_result = json.loads(propose_result_str)
         patch_id = propose_result["patch_id"]
 
         # Execute: apply
         apply_tool = ApplyEditTool(mock_agent)
-        result_str = apply_tool.apply(
-            patch_id=patch_id,
-            max_files=10,
-            max_changes=50
-        )
+        result_str = apply_tool.apply(patch_id=patch_id, max_files=10, max_changes=50)
 
         # Verify: 返回有效 JSON
         result = json.loads(result_str)
@@ -706,11 +667,7 @@ class TestMCPToolIntegration:
         apply_tool = ApplyEditTool(mock_agent)
 
         # Execute with invalid patch_id
-        result_str = apply_tool.apply(
-            patch_id="invalid_patch_123",
-            max_files=10,
-            max_changes=50
-        )
+        result_str = apply_tool.apply(patch_id="invalid_patch_123", max_files=10, max_changes=50)
 
         # Verify: 返回错误信息
         assert "Error" in result_str or "error" in result_str.lower()
@@ -778,11 +735,7 @@ class TestIntegration:
         tool = SafeEditTool(project_root=tmp_path)
 
         # Step 1: Propose
-        result = tool.propose_edit(
-            pattern="old_var",
-            replacement="new_var",
-            scope="**/*.py"
-        )
+        result = tool.propose_edit(pattern="old_var", replacement="new_var", scope="**/*.py")
 
         assert result["patch_id"] is not None
         assert len(result["affected_files"]) == 2
@@ -819,11 +772,7 @@ class TestIntegration:
         tool = SafeEditTool(project_root=tmp_path)
 
         # Step 1: Propose
-        result = tool.propose_edit(
-            pattern="version = '1.0'",
-            replacement="version = '2.0'",
-            scope="**/*.py"
-        )
+        result = tool.propose_edit(pattern="version = '1.0'", replacement="version = '2.0'", scope="**/*.py")
 
         # Step 2: 模拟用户同时修改文件
         file.write_text("version = '1.5'\n")  # 用户手动改成 1.5
@@ -852,11 +801,7 @@ class TestIntegration:
         tool = SafeEditTool(project_root=tmp_path)
 
         # Execute
-        result = tool.propose_edit(
-            pattern=r"api\.getData",
-            replacement="api.fetchData",
-            scope="**/*.py"
-        )
+        result = tool.propose_edit(pattern=r"api\.getData", replacement="api.fetchData", scope="**/*.py")
 
         assert len(result["affected_files"]) == 5
         assert result["statistics"]["files_modified"] == 5
@@ -888,19 +833,12 @@ class TestIntegration:
         tool = SafeEditTool(project_root=tmp_path)
 
         # Propose (影响 10 个文件)
-        result = tool.propose_edit(
-            pattern="import os",
-            replacement="import sys",
-            scope="**/*.py"
-        )
+        result = tool.propose_edit(pattern="import os", replacement="import sys", scope="**/*.py")
 
         assert len(result["affected_files"]) == 10
 
         # 尝试 apply，但约束很严格
-        plan = ExecutionPlan(
-            limits=ExecutionLimits(max_files=3),
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP)
-        )
+        plan = ExecutionPlan(limits=ExecutionLimits(max_files=3), rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP))
 
         with pytest.raises(ConstraintViolationError) as exc:
             tool.apply_edit(result["patch_id"], plan)

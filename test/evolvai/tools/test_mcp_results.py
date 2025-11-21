@@ -11,6 +11,7 @@ Dimension 5: 验证错误被正确捕获并返回 LLM 友好的错误信息
 - 错误信息对 LLM 友好
 - 包含修复建议
 """
+
 import pytest
 
 
@@ -37,12 +38,7 @@ class TestBatchEditJSONResults:
 
         # Create tool and execute in preview mode
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=True
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
@@ -56,12 +52,10 @@ class TestBatchEditJSONResults:
         assert result["success"] is True, f"Expected success=True, got {result['success']}"
 
         # Verify affected_files is a list
-        assert isinstance(result["affected_files"], list), \
-            f"affected_files should be list, got {type(result['affected_files'])}"
+        assert isinstance(result["affected_files"], list), f"affected_files should be list, got {type(result['affected_files'])}"
 
         # Verify we found the 3 test files
-        assert len(result["affected_files"]) == 3, \
-            f"Expected 3 affected files, got {len(result['affected_files'])}"
+        assert len(result["affected_files"]) == 3, f"Expected 3 affected files, got {len(result['affected_files'])}"
         # TODO: Implement in Phase 2.1
 
     def test_apply_mode_includes_rollback_id(self, simple_project, mock_agent):
@@ -84,12 +78,7 @@ class TestBatchEditJSONResults:
 
         # Create tool and execute in apply mode
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=False
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=False)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
@@ -99,12 +88,9 @@ class TestBatchEditJSONResults:
 
         # Verify rollback_id is not None for successful apply
         if result["success"]:
-            assert result["rollback_id"] is not None, \
-                "rollback_id should not be None for successful apply"
-            assert isinstance(result["rollback_id"], str), \
-                f"rollback_id should be str, got {type(result['rollback_id'])}"
-            assert len(result["rollback_id"]) > 0, \
-                "rollback_id should not be empty string"
+            assert result["rollback_id"] is not None, "rollback_id should not be None for successful apply"
+            assert isinstance(result["rollback_id"], str), f"rollback_id should be str, got {type(result['rollback_id'])}"
+            assert len(result["rollback_id"]) > 0, "rollback_id should not be empty string"
         # TODO: Implement in Phase 2.1
 
     def test_unified_diff_format(self, simple_project, mock_agent):
@@ -127,12 +113,7 @@ class TestBatchEditJSONResults:
 
         # Create tool and execute in preview mode to get diff
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=True
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
@@ -142,18 +123,15 @@ class TestBatchEditJSONResults:
         unified_diff = result["unified_diff"]
 
         # Verify unified_diff is a string
-        assert isinstance(unified_diff, str), \
-            f"unified_diff should be str, got {type(unified_diff)}"
+        assert isinstance(unified_diff, str), f"unified_diff should be str, got {type(unified_diff)}"
 
         # Verify git-style diff markers present
         assert "---" in unified_diff, "unified_diff missing '---' marker"
         assert "+++" in unified_diff, "unified_diff missing '+++' marker"
 
         # Verify diff shows the actual changes (old_value -> new_value)
-        assert "-" in unified_diff or "old_value" in unified_diff, \
-            "unified_diff should show removed/old content"
-        assert "+" in unified_diff or "new_value" in unified_diff, \
-            "unified_diff should show added/new content"
+        assert "-" in unified_diff or "old_value" in unified_diff, "unified_diff should show removed/old content"
+        assert "+" in unified_diff or "new_value" in unified_diff, "unified_diff should show added/new content"
         # TODO: Implement in Phase 2.1
 
 
@@ -216,10 +194,7 @@ class TestBatchEditErrorHandling:
         # Create tool and execute with invalid regex
         tool = BatchEditTool(mock_agent)
         result_json = tool.apply(
-            pattern="[unclosed(",  # Invalid regex - unclosed bracket
-            replacement="anything",
-            scope="**/*.py",
-            preview=True
+            pattern="[unclosed(", replacement="anything", scope="**/*.py", preview=True  # Invalid regex - unclosed bracket
         )
 
         # Verify result is valid JSON
@@ -227,14 +202,14 @@ class TestBatchEditErrorHandling:
 
         # Verify success is False
         assert "success" in result, "Missing 'success' field"
-        assert result["success"] is False, \
-            f"Expected success=False for invalid regex, got {result['success']}"
+        assert result["success"] is False, f"Expected success=False for invalid regex, got {result['success']}"
 
         # Verify error_message field exists and mentions regex/pattern
         assert "error_message" in result, "Missing 'error_message' field"
         error_msg = result["error_message"].lower()
-        assert "regex" in error_msg or "pattern" in error_msg, \
-            f"Error message should mention 'regex' or 'pattern', got: {result['error_message']}"
+        assert (
+            "regex" in error_msg or "pattern" in error_msg
+        ), f"Error message should mention 'regex' or 'pattern', got: {result['error_message']}"
         # TODO: Implement in Phase 2.2
 
     def test_execution_plan_constraint_violation(self, simple_project, mock_agent):
@@ -274,27 +249,21 @@ class TestBatchEditErrorHandling:
 
         # Create tool and execute with constraint
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="old_value",
-            replacement="new_value",
-            scope="**/*.py",
-            preview=True,
-            execution_plan=plan
-        )
+        result_json = tool.apply(pattern="old_value", replacement="new_value", scope="**/*.py", preview=True, execution_plan=plan)
 
         # Verify result is valid JSON
         result = json.loads(result_json)
 
         # Verify success is False
         assert "success" in result, "Missing 'success' field"
-        assert result["success"] is False, \
-            f"Expected success=False for constraint violation, got {result['success']}"
+        assert result["success"] is False, f"Expected success=False for constraint violation, got {result['success']}"
 
         # Verify error_message mentions max_files constraint
         assert "error_message" in result, "Missing 'error_message' field"
         error_msg = result["error_message"].lower()
-        assert "max_files" in error_msg or "constraint" in error_msg or "limit" in error_msg, \
-            f"Error message should mention constraint violation, got: {result['error_message']}"
+        assert (
+            "max_files" in error_msg or "constraint" in error_msg or "limit" in error_msg
+        ), f"Error message should mention constraint violation, got: {result['error_message']}"
         # TODO: Implement in Phase 2.2
 
     def test_error_response_includes_success_false(self, simple_project, mock_agent):
@@ -317,29 +286,19 @@ class TestBatchEditErrorHandling:
 
         # Create tool and trigger an error (invalid regex)
         tool = BatchEditTool(mock_agent)
-        result_json = tool.apply(
-            pattern="[invalid(",  # Invalid regex
-            replacement="anything",
-            scope="**/*.py",
-            preview=True
-        )
+        result_json = tool.apply(pattern="[invalid(", replacement="anything", scope="**/*.py", preview=True)  # Invalid regex
 
         # Verify result is valid JSON
         result = json.loads(result_json)
 
         # Verify success field exists and is False
-        assert "success" in result, \
-            "Error response must include 'success' field"
-        assert result["success"] is False, \
-            f"Error response must have success=False, got {result['success']}"
+        assert "success" in result, "Error response must include 'success' field"
+        assert result["success"] is False, f"Error response must have success=False, got {result['success']}"
 
         # Verify error_message exists for failed operations
-        assert "error_message" in result, \
-            "Error response must include 'error_message' field"
-        assert result["error_message"] is not None, \
-            "error_message should not be None for failed operations"
-        assert len(result["error_message"]) > 0, \
-            "error_message should not be empty for failed operations"
+        assert "error_message" in result, "Error response must include 'error_message' field"
+        assert result["error_message"] is not None, "error_message should not be None for failed operations"
+        assert len(result["error_message"]) > 0, "error_message should not be empty for failed operations"
         # TODO: Implement in Phase 2.2
 
 

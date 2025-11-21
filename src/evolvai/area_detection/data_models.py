@@ -43,6 +43,7 @@ class QueryRouting:
 
 # 编辑验证相关数据模型
 
+
 class RollbackStrategy(Enum):
     """回滚策略枚举"""
 
@@ -94,12 +95,14 @@ class RollbackResult:
 class EditValidationError(Exception):
     """编辑验证异常"""
 
-    def __init__(self,
-                 error_type: str,
-                 message: str,
-                 file_path: Optional[str] = None,
-                 line_number: Optional[int] = None,
-                 details: Optional[dict] = None):
+    def __init__(
+        self,
+        error_type: str,
+        message: str,
+        file_path: Optional[str] = None,
+        line_number: Optional[int] = None,
+        details: Optional[dict] = None,
+    ):
         super().__init__(message)
         self.error_type = error_type
         self.message = message
@@ -117,6 +120,7 @@ class EditValidationError(Exception):
 
 
 # 执行相关数据模型
+
 
 class ExecutionRiskLevel(Enum):
     """执行风险级别"""
@@ -172,11 +176,7 @@ class ProcessInfo:
 class ExecutionValidationError(Exception):
     """执行验证异常"""
 
-    def __init__(self,
-                 error_type: str,
-                 message: str,
-                 command: Optional[str] = None,
-                 precondition: Optional[ExecutionPrecondition] = None):
+    def __init__(self, error_type: str, message: str, command: Optional[str] = None, precondition: Optional[ExecutionPrecondition] = None):
         super().__init__(message)
         self.error_type = error_type
         self.message = message

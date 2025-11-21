@@ -20,9 +20,11 @@ class TestPreconditionChecker:
         checker = PreconditionChecker()
 
         # 模拟安全命令
-        with patch('os.access', return_value=True), \
-             patch('shutil.which', return_value='/bin/ls'), \
-             patch('os.path.exists', return_value=True):
+        with (
+            patch("os.access", return_value=True),
+            patch("shutil.which", return_value="/bin/ls"),
+            patch("os.path.exists", return_value=True),
+        ):
 
             precondition = ExecutionPrecondition(
                 command="ls -la",
@@ -31,7 +33,7 @@ class TestPreconditionChecker:
                 required_permissions=["read"],
                 system_dependencies=["ls"],
                 environment_variables={},
-                risk_level=ExecutionRiskLevel.LOW
+                risk_level=ExecutionRiskLevel.LOW,
             )
 
             result = checker.validate(precondition)
@@ -55,7 +57,7 @@ class TestPreconditionChecker:
             required_permissions=["write"],
             system_dependencies=["rm"],
             environment_variables={},
-            risk_level=ExecutionRiskLevel.CRITICAL
+            risk_level=ExecutionRiskLevel.CRITICAL,
         )
 
         result = checker.validate(precondition)
@@ -73,7 +75,7 @@ class TestPreconditionChecker:
         checker = PreconditionChecker()
 
         # 模拟依赖缺失
-        with patch('shutil.which', return_value=None):
+        with patch("shutil.which", return_value=None):
             precondition = ExecutionPrecondition(
                 command="nonexistent-command",
                 working_directory="/tmp",
@@ -81,7 +83,7 @@ class TestPreconditionChecker:
                 required_permissions=[],
                 system_dependencies=["nonexistent-command"],
                 environment_variables={},
-                risk_level=ExecutionRiskLevel.MEDIUM
+                risk_level=ExecutionRiskLevel.MEDIUM,
             )
 
             result = checker.validate(precondition)
@@ -96,7 +98,7 @@ class TestPreconditionChecker:
         checker = PreconditionChecker()
 
         # 模拟权限不足
-        with patch('os.access', return_value=False):
+        with patch("os.access", return_value=False):
             precondition = ExecutionPrecondition(
                 command="cat /etc/shadow",
                 working_directory="/",
@@ -104,7 +106,7 @@ class TestPreconditionChecker:
                 required_permissions=["read"],
                 system_dependencies=["cat"],
                 environment_variables={},
-                risk_level=ExecutionRiskLevel.HIGH
+                risk_level=ExecutionRiskLevel.HIGH,
             )
 
             result = checker.validate(precondition)
@@ -129,13 +131,9 @@ class TestProcessManager:
         mock_process.pid = 12345
         mock_process.poll.return_value = None
 
-        with patch('subprocess.Popen', return_value=mock_process), \
-             patch('os.getpgid', return_value=12345):
+        with patch("subprocess.Popen", return_value=mock_process), patch("os.getpgid", return_value=12345):
 
-            process_info = manager.create_process(
-                command="echo hello",
-                working_directory="/tmp"
-            )
+            process_info = manager.create_process(command="echo hello", working_directory="/tmp")
 
             # 验证进程信息正确设置
             assert process_info.pid == 12345
@@ -153,14 +151,9 @@ class TestProcessManager:
         manager = ProcessManager()
 
         # 模拟超时场景
-        with patch('subprocess.TimeoutExpired'), \
-             patch('os.killpg') as mock_killpg, \
-             patch('time.sleep'):
+        with patch("subprocess.TimeoutExpired"), patch("os.killpg") as mock_killpg, patch("time.sleep"):
 
-            result = manager.wait_with_timeout(
-                process_info=Mock(pgid=12345),
-                timeout_seconds=0.001  # 强制超时
-            )
+            result = manager.wait_with_timeout(process_info=Mock(pgid=12345), timeout_seconds=0.001)  # 强制超时
 
             # 验证超时结果
             assert result.timeout_occurred is True
@@ -178,7 +171,7 @@ class TestProcessManager:
         manager = ProcessManager()
 
         # 模拟进程异常退出
-        with patch('os.killpg') as mock_killpg:
+        with patch("os.killpg") as mock_killpg:
             process_info = Mock(pgid=12345, is_running=True)
             manager.cleanup_process(process_info)
 
@@ -202,9 +195,11 @@ class TestSafeExecWrapper:
         wrapper = SafeExecWrapper(mock_agent, mock_project)
 
         # 模拟成功的执行流程
-        with patch.object(wrapper, '_check_preconditions') as mock_check, \
-             patch.object(wrapper, '_execute_command') as mock_exec, \
-             patch.object(wrapper, '_log_execution') as mock_log:
+        with (
+            patch.object(wrapper, "_check_preconditions") as mock_check,
+            patch.object(wrapper, "_execute_command") as mock_exec,
+            patch.object(wrapper, "_log_execution") as mock_log,
+        ):
 
             mock_check.return_value = Mock(is_valid=True)
             mock_exec.return_value = ExecutionResult(
@@ -215,14 +210,10 @@ class TestSafeExecWrapper:
                 duration_ms=50.0,
                 precondition_passed=True,
                 command="echo hello",
-                working_directory="/tmp"
+                working_directory="/tmp",
             )
 
-            result = wrapper.safe_exec(
-                command="echo hello",
-                working_directory="/tmp",
-                timeout_seconds=30
-            )
+            result = wrapper.safe_exec(command="echo hello", working_directory="/tmp", timeout_seconds=30)
 
             assert result.success
             assert result.exit_code == 0
@@ -240,14 +231,10 @@ class TestSafeExecWrapper:
         wrapper = SafeExecWrapper(mock_agent, mock_project)
 
         # 模拟前置条件检查失败
-        with patch.object(wrapper, '_check_preconditions') as mock_check:
+        with patch.object(wrapper, "_check_preconditions") as mock_check:
             mock_check.return_value = Mock(is_valid=False, errors=["Dangerous command"])
 
-            result = wrapper.safe_exec(
-                command="rm -rf /",
-                working_directory="/",
-                timeout_seconds=60
-            )
+            result = wrapper.safe_exec(command="rm -rf /", working_directory="/", timeout_seconds=60)
 
             assert not result.success
             assert not result.precondition_passed
@@ -266,9 +253,11 @@ class TestSafeExecWrapper:
         wrapper = SafeExecWrapper(mock_agent, mock_project)
 
         # 模拟审计日志记录
-        with patch.object(wrapper, '_check_preconditions') as mock_check, \
-             patch.object(wrapper, '_execute_command') as mock_exec, \
-             patch.object(wrapper.agent, 'execution_engine') as mock_engine:
+        with (
+            patch.object(wrapper, "_check_preconditions") as mock_check,
+            patch.object(wrapper, "_execute_command") as mock_exec,
+            patch.object(wrapper.agent, "execution_engine") as mock_engine,
+        ):
 
             mock_check.return_value = Mock(is_valid=True)
             mock_exec.return_value = ExecutionResult(
@@ -279,7 +268,7 @@ class TestSafeExecWrapper:
                 duration_ms=100.0,
                 precondition_passed=True,
                 command="ls",
-                working_directory="/tmp"
+                working_directory="/tmp",
             )
 
             wrapper.safe_exec(command="ls", working_directory="/tmp")

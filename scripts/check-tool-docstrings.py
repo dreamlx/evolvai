@@ -46,8 +46,7 @@ def check_file(file_path: Path) -> list[str]:
 
         # Check if class inherits from Tool
         is_tool = any(
-            (isinstance(base, ast.Name) and base.id == "Tool")
-            or (isinstance(base, ast.Attribute) and base.attr == "Tool")
+            (isinstance(base, ast.Name) and base.id == "Tool") or (isinstance(base, ast.Attribute) and base.attr == "Tool")
             for base in node.bases
         )
 

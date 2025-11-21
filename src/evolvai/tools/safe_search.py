@@ -272,7 +272,7 @@ class SafeSearchWrapper:
                 applied_area.match_count = len(area_results)
                 applied_area.duration_ms = 10.0  # 简化计时
 
-            except Exception as e:
+            except Exception:
                 # 记录单个区域的错误，但继续处理其他区域
                 applied_area.scanned_files = 0
                 applied_area.match_count = 0

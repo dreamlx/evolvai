@@ -43,6 +43,7 @@ class SafeExecTool(Tool):
             confirmed: Bypass confirmation for risky commands (default False)
 
         Returns: JSON with exit_code, stdout, stderr, duration_ms, safety info
+
         """
         import json
 

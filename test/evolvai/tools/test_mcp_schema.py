@@ -38,18 +38,14 @@ class TestBatchEditParameterSchema:
         # Verify pattern is required and typed as str
         assert "pattern" in params, "pattern parameter not found"
         pattern_param = params["pattern"]
-        assert pattern_param.default == inspect.Parameter.empty, \
-            "pattern should be required (no default)"
-        assert pattern_param.annotation is str, \
-            f"pattern should be typed as str, got {pattern_param.annotation}"
+        assert pattern_param.default == inspect.Parameter.empty, "pattern should be required (no default)"
+        assert pattern_param.annotation is str, f"pattern should be typed as str, got {pattern_param.annotation}"
 
         # Verify replacement is required and typed as str
         assert "replacement" in params, "replacement parameter not found"
         replacement_param = params["replacement"]
-        assert replacement_param.default == inspect.Parameter.empty, \
-            "replacement should be required (no default)"
-        assert replacement_param.annotation is str, \
-            f"replacement should be typed as str, got {replacement_param.annotation}"
+        assert replacement_param.default == inspect.Parameter.empty, "replacement should be required (no default)"
+        assert replacement_param.annotation is str, f"replacement should be typed as str, got {replacement_param.annotation}"
         # TODO: Implement in Phase 1.2
 
     def test_optional_parameters_with_defaults(self):
@@ -74,18 +70,14 @@ class TestBatchEditParameterSchema:
         # Verify scope has correct default
         assert "scope" in params, "scope parameter not found"
         scope_param = params["scope"]
-        assert scope_param.default == "**/*", \
-            f"scope should default to '**/*', got {scope_param.default}"
-        assert scope_param.annotation is str, \
-            f"scope should be typed as str, got {scope_param.annotation}"
+        assert scope_param.default == "**/*", f"scope should default to '**/*', got {scope_param.default}"
+        assert scope_param.annotation is str, f"scope should be typed as str, got {scope_param.annotation}"
 
         # Verify preview has correct default
         assert "preview" in params, "preview parameter not found"
         preview_param = params["preview"]
-        assert preview_param.default is False, \
-            f"preview should default to False, got {preview_param.default}"
-        assert preview_param.annotation is bool, \
-            f"preview should be typed as bool, got {preview_param.annotation}"
+        assert preview_param.default is False, f"preview should default to False, got {preview_param.default}"
+        assert preview_param.annotation is bool, f"preview should be typed as bool, got {preview_param.annotation}"
         # TODO: Implement in Phase 1.2
 
     def test_execution_plan_parameter_type(self):
@@ -114,24 +106,20 @@ class TestBatchEditParameterSchema:
         exec_plan_param = params["execution_plan"]
 
         # Verify default is None (Optional)
-        assert exec_plan_param.default is None, \
-            f"execution_plan should default to None, got {exec_plan_param.default}"
+        assert exec_plan_param.default is None, f"execution_plan should default to None, got {exec_plan_param.default}"
 
         # Verify type annotation is Optional[ExecutionPlan]
         annotation = exec_plan_param.annotation
         origin = get_origin(annotation)
-        
+
         # Check if it's Optional (Union with None)
         if origin is not None:
             args = get_args(annotation)
-            assert ExecutionPlan in args, \
-                f"ExecutionPlan not found in type annotation {annotation}"
-            assert type(None) in args, \
-                "None not found in type annotation (should be Optional)"
+            assert ExecutionPlan in args, f"ExecutionPlan not found in type annotation {annotation}"
+            assert type(None) in args, "None not found in type annotation (should be Optional)"
         else:
             # If no origin, might be just ExecutionPlan (which is also valid)
-            assert annotation == ExecutionPlan, \
-                f"Expected ExecutionPlan, got {annotation}"
+            assert annotation == ExecutionPlan, f"Expected ExecutionPlan, got {annotation}"
         # TODO: Implement in Phase 1.2
 
 
@@ -160,10 +148,8 @@ class TestSafeSearchParameterSchema:
         # Verify query is required and typed as str
         assert "query" in params, "query parameter not found"
         query_param = params["query"]
-        assert query_param.default == inspect.Parameter.empty, \
-            "query should be required (no default)"
-        assert query_param.annotation is str, \
-            f"query should be typed as str, got {query_param.annotation}"
+        assert query_param.default == inspect.Parameter.empty, "query should be required (no default)"
+        assert query_param.annotation is str, f"query should be typed as str, got {query_param.annotation}"
         # TODO: Implement in Phase 1.2
 
     def test_area_selector_enum_values(self):
@@ -188,10 +174,8 @@ class TestSafeSearchParameterSchema:
         # Verify area_selector has correct default
         assert "area_selector" in params, "area_selector parameter not found"
         area_selector_param = params["area_selector"]
-        assert area_selector_param.default == "auto", \
-            f"area_selector should default to 'auto', got {area_selector_param.default}"
-        assert area_selector_param.annotation is str, \
-            f"area_selector should be typed as str, got {area_selector_param.annotation}"
+        assert area_selector_param.default == "auto", f"area_selector should default to 'auto', got {area_selector_param.default}"
+        assert area_selector_param.annotation is str, f"area_selector should be typed as str, got {area_selector_param.annotation}"
         # TODO: Implement in Phase 1.2
 
     def test_mode_parameter_defaults(self):
@@ -216,10 +200,8 @@ class TestSafeSearchParameterSchema:
         # Verify mode has correct default
         assert "mode" in params, "mode parameter not found"
         mode_param = params["mode"]
-        assert mode_param.default == "balanced", \
-            f"mode should default to 'balanced', got {mode_param.default}"
-        assert mode_param.annotation is str, \
-            f"mode should be typed as str, got {mode_param.annotation}"
+        assert mode_param.default == "balanced", f"mode should default to 'balanced', got {mode_param.default}"
+        assert mode_param.annotation is str, f"mode should be typed as str, got {mode_param.annotation}"
         # TODO: Implement in Phase 1.2
 
 
@@ -246,8 +228,7 @@ class TestBatchEditDocstring:
         assert docstring is not None, "apply method has no docstring"
 
         # Verify docstring is substantial
-        assert len(docstring) >= 100, \
-            f"Docstring too short: {len(docstring)} chars (expected >= 100)"
+        assert len(docstring) >= 100, f"Docstring too short: {len(docstring)} chars (expected >= 100)"
         # TODO: Implement in Phase 1.3
 
     def test_docstring_contains_required_sections(self):
@@ -291,12 +272,9 @@ class TestBatchEditDocstring:
         assert docstring is not None, "apply method has no docstring"
 
         # Verify core parameters are documented
-        assert "pattern:" in docstring.lower(), \
-            "Docstring missing 'pattern' parameter description"
-        assert "replacement:" in docstring.lower(), \
-            "Docstring missing 'replacement' parameter description"
-        assert "preview:" in docstring.lower(), \
-            "Docstring missing 'preview' parameter description"
+        assert "pattern:" in docstring.lower(), "Docstring missing 'pattern' parameter description"
+        assert "replacement:" in docstring.lower(), "Docstring missing 'replacement' parameter description"
+        assert "preview:" in docstring.lower(), "Docstring missing 'preview' parameter description"
         # TODO: Implement in Phase 1.3
 
     def test_docstring_includes_safety_warnings(self):
@@ -318,10 +296,8 @@ class TestBatchEditDocstring:
 
         # Verify safety-related keywords (case-insensitive)
         docstring_lower = docstring.lower()
-        assert "rollback" in docstring_lower, \
-            "Docstring missing 'rollback' safety keyword"
-        assert "file-level" in docstring_lower or "file level" in docstring_lower, \
-            "Docstring missing 'file-level' safety keyword"
+        assert "rollback" in docstring_lower, "Docstring missing 'rollback' safety keyword"
+        assert "file-level" in docstring_lower or "file level" in docstring_lower, "Docstring missing 'file-level' safety keyword"
         # TODO: Implement in Phase 1.3
 
 
@@ -347,8 +323,6 @@ class TestSafeSearchDocstring:
 
         # Verify area detection keywords (case-insensitive)
         docstring_lower = docstring.lower()
-        assert "area" in docstring_lower, \
-            "Docstring missing 'area' keyword"
-        assert "detect" in docstring_lower or "auto" in docstring_lower, \
-            "Docstring missing 'detect' or 'auto' keyword for area detection"
+        assert "area" in docstring_lower, "Docstring missing 'area' keyword"
+        assert "detect" in docstring_lower or "auto" in docstring_lower, "Docstring missing 'detect' or 'auto' keyword for area detection"
         # TODO: Implement in Phase 1.3

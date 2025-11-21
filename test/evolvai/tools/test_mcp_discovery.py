@@ -72,16 +72,13 @@ class TestMCPToolDiscovery:
 
         # Test batch_edit
         batch_edit_class = tr.get_tool_class_by_name("batch_edit")
-        assert batch_edit_class.__name__ == "BatchEditTool", \
-            f"Expected BatchEditTool, got {batch_edit_class.__name__}"
+        assert batch_edit_class.__name__ == "BatchEditTool", f"Expected BatchEditTool, got {batch_edit_class.__name__}"
 
         # Test safe_search
         safe_search_class = tr.get_tool_class_by_name("safe_search")
-        assert safe_search_class.__name__ == "SafeSearchTool", \
-            f"Expected SafeSearchTool, got {safe_search_class.__name__}"
+        assert safe_search_class.__name__ == "SafeSearchTool", f"Expected SafeSearchTool, got {safe_search_class.__name__}"
 
         # Test get_language_hint
         language_hint_class = tr.get_tool_class_by_name("get_language_hint")
-        assert language_hint_class.__name__ == "GetLanguageHintTool", \
-            f"Expected GetLanguageHintTool, got {language_hint_class.__name__}"
+        assert language_hint_class.__name__ == "GetLanguageHintTool", f"Expected GetLanguageHintTool, got {language_hint_class.__name__}"
         # TODO: Implement in Phase 1.1

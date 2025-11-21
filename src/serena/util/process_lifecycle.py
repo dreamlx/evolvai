@@ -170,7 +170,7 @@ class ProcessLifecycleManager:
                     os._exit(0)  # Force immediate exit
 
         except Exception as e:
-            log.error("Error in parent monitor: %s", e, exc_info=True)
+            log.exception("Error in parent monitor: %s", e)
 
     def stop(self) -> None:
         """Stop all monitoring tasks and cleanup."""

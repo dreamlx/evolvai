@@ -50,6 +50,7 @@ class SafeSearchTool(Tool, ToolMarkerCanEdit):
             scope: Legacy glob pattern (default "**/*")
 
         Returns: JSON with success, query, total_results, execution_report, raw_results
+
         """
         try:
             # 获取项目根目录

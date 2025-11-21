@@ -210,6 +210,7 @@ class TestSafeExecDay1PreconditionChecker:
 
 # ==================== Day 2: ProcessManager + Timeout Management ====================
 
+
 class TestSafeExecDay2ProcessManager:
     """Day 2: ProcessManager TDD - 进程组管理 + Timeout管理 + 交互命令检测"""
 
@@ -255,7 +256,7 @@ class TestSafeExecDay2ProcessManager:
         error_msg = str(exc_info.value)
         assert "must be greater than 0" in error_msg.lower()
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_timeout_provides_learning_feedback(self, mock_run, tmp_path):
         """测试timeout时提供学习反馈（suggested_timeout）
 
@@ -272,12 +273,7 @@ class TestSafeExecDay2ProcessManager:
         And error_message 包含 "timed out"
         """
         # Mock subprocess.run 抛出 TimeoutExpired
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            cmd="sleep 100",
-            timeout=1,
-            output=b"",
-            stderr=b""
-        )
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="sleep 100", timeout=1, output=b"", stderr=b"")
 
         wrapper = SafeExecWrapper(working_dir=str(tmp_path))
         result = wrapper.execute(command="sleep 100", timeout=1)
@@ -383,7 +379,7 @@ class TestSafeExecDay2ProcessManager:
         if result.success:
             assert "Hello from script" in result.stdout
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_safe_exec_timeout_kills_process_group(self, mock_run, tmp_path):
         """测试timeout时通过进程组清理所有子进程
 
@@ -401,12 +397,7 @@ class TestSafeExecDay2ProcessManager:
         Note: 使用Mock验证os.setsid调用，避免跨平台进程检测问题
         """
         # Mock subprocess.run 抛出 TimeoutExpired
-        mock_run.side_effect = subprocess.TimeoutExpired(
-            cmd="sleep 100 & sleep 100 & wait",
-            timeout=1,
-            output=b"",
-            stderr=b""
-        )
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="sleep 100 & sleep 100 & wait", timeout=1, output=b"", stderr=b"")
 
         wrapper = SafeExecWrapper(working_dir=str(tmp_path))
         result = wrapper.execute(command="sleep 100 & sleep 100 & wait", timeout=1)
@@ -418,7 +409,7 @@ class TestSafeExecDay2ProcessManager:
         # 验证进程组设置（应该有 preexec_fn 或类似机制）
         # Note: 实际实现时需要使用 os.setsid 或 start_new_session=True
         # 这里我们验证 subprocess.run 被调用
-        assert call_kwargs['timeout'] == 1
+        assert call_kwargs["timeout"] == 1
 
         # 验证返回结果
         assert result.timeout_occurred is True
@@ -438,10 +429,7 @@ class TestSafeExecDay2ProcessManager:
         wrapper = SafeExecWrapper(working_dir=str(tmp_path))
 
         # 命令同时输出到stdout和stderr
-        result = wrapper.execute(
-            command='echo "stdout message" && echo "stderr message" >&2',
-            timeout=5
-        )
+        result = wrapper.execute(command='echo "stdout message" && echo "stderr message" >&2', timeout=5)
 
         assert result.success is True
         assert "stdout message" in result.stdout
@@ -490,7 +478,7 @@ class TestSafeExecDay2ProcessManager:
 
         assert result.success is True
 
-        lines = result.stdout.strip().split('\n')
+        lines = result.stdout.strip().split("\n")
 
         # 如果输出被截断，应该：
         # 1. 总行数 ≈ 101（50 + 省略标记 + 50）
@@ -531,6 +519,7 @@ class TestSafeExecDay2ProcessManager:
 
 # ==================== MCP Tools Tests (Placeholder for Day 3) ====================
 
+
 class TestSafeExecDay3ExecutionPlan:
     """Day 3: ExecutionPlan Integration & MCP Tools"""
 
@@ -551,8 +540,7 @@ class TestSafeExecDay3ExecutionPlan:
 
         # Create plan with max timeout = 10s
         plan = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT, commands=[]),
-            limits=ExecutionLimits(timeout_seconds=10)
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT, commands=[]), limits=ExecutionLimits(timeout_seconds=10)
         )
 
         wrapper = SafeExecWrapper(working_dir=str(tmp_path))
@@ -600,8 +588,7 @@ class TestSafeExecDay3ExecutionPlan:
         from evolvai.core.execution_plan import ExecutionLimits, ExecutionPlan, RollbackStrategy, RollbackStrategyType
 
         plan = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT, commands=[]),
-            limits=ExecutionLimits(timeout_seconds=5)
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT, commands=[]), limits=ExecutionLimits(timeout_seconds=5)
         )
 
         wrapper = SafeExecWrapper(working_dir=str(tmp_path))
@@ -612,6 +599,7 @@ class TestSafeExecDay3ExecutionPlan:
 
         # Verify violation details are in exception
         assert "Timeout exceeds plan limit" in str(exc_info.value)
+
 
 class TestSafeExecMCPTools:
     """Day 3: MCP工具暴露测试"""
@@ -663,11 +651,7 @@ class TestSafeExecMCPTools:
         tool = SafeExecTool(agent=mock_agent)
 
         # Call tool's apply method (simulating MCP call)
-        result = tool.apply(
-            command="echo test",
-            timeout=5,
-            working_dir=str(tmp_path)
-        )
+        result = tool.apply(command="echo test", timeout=5, working_dir=str(tmp_path))
 
         # Verify result format
         assert "success" in result or "test" in result
@@ -700,6 +684,7 @@ class TestSafeExecMCPTools:
 
 # ==================== Story 2.4: Interactive Confirmation Tests ====================
 
+
 class TestSafeExecStory24Day1CoreInfrastructure:
     """Story 2.4 Day 1: Core Infrastructure - Confirmation Detection"""
 
@@ -721,9 +706,9 @@ class TestSafeExecStory24Day1CoreInfrastructure:
         result = wrapper.execute(command="echo test", timeout=5)
 
         # Verify confirmation fields exist
-        assert hasattr(result, 'confirmation_required')
-        assert hasattr(result, 'confirmation_message')
-        assert hasattr(result, 'risk_level')
+        assert hasattr(result, "confirmation_required")
+        assert hasattr(result, "confirmation_message")
+        assert hasattr(result, "risk_level")
 
     def test_execution_result_defaults_no_confirmation(self, tmp_path):
         """测试ExecutionResult默认值为no confirmation
@@ -1030,11 +1015,7 @@ class TestSafeExecStory24Day3MCPIntegration:
         tool = SafeExecTool(agent=mock_agent)
 
         # Call with high-risk command
-        result_json = tool.apply(
-            command="rm -rf ./tmp_*",
-            timeout=5,
-            working_dir=str(tmp_path)
-        )
+        result_json = tool.apply(command="rm -rf ./tmp_*", timeout=5, working_dir=str(tmp_path))
 
         # Parse JSON
         result = json.loads(result_json)
@@ -1075,12 +1056,7 @@ class TestSafeExecStory24Day3MCPIntegration:
         tool = SafeExecTool(agent=mock_agent)
 
         # Call with confirmed=True
-        result_json = tool.apply(
-            command="rm -rf ./tmp_*",
-            timeout=5,
-            working_dir=str(tmp_path),
-            confirmed=True
-        )
+        result_json = tool.apply(command="rm -rf ./tmp_*", timeout=5, working_dir=str(tmp_path), confirmed=True)
 
         # Parse JSON
         result = json.loads(result_json)

@@ -178,9 +178,7 @@ class ApplyEditTool(Tool, ToolMarkerCanEdit):
         )
 
         try:
-            result: ApplyResult = editor.apply_edit(
-                patch_id=patch_id, execution_plan=execution_plan
-            )
+            result: ApplyResult = editor.apply_edit(patch_id=patch_id, execution_plan=execution_plan)
 
             return self._format_apply_result(result)
 

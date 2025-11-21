@@ -34,19 +34,11 @@ class PreconditionChecker:
             ":(){ :|:& };:",  # fork bomb
             "sudo rm",
             "chmod 777 /",
-            "chown root"
+            "chown root",
         ]
 
         # 高风险命令模式
-        self.high_risk_patterns = [
-            "rm ",
-            "dd ",
-            "mkfs",
-            "fdisk",
-            "format",
-            "chmod 777",
-            "chown"
-        ]
+        self.high_risk_patterns = ["rm ", "dd ", "mkfs", "fdisk", "format", "chmod 777", "chown"]
 
     def validate(self, precondition: ExecutionPrecondition) -> ValidationResult:
         """

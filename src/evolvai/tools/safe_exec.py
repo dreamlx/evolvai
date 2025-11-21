@@ -73,20 +73,20 @@ class ExecutionResult:
 # Absurd command patterns (3-5 rules, not 30-50)
 # These detect AI reasoning failure, not "dangerous commands"
 ABSURD_COMMAND_PATTERNS = [
-    (r'rm\s+(-rf|--recursive.*--force)\s+/\s*$', "rm_rf_root", "Deleting root directory"),
-    (r'rm\s+(-rf|--recursive.*--force)\s+/\*', "rm_rf_root_wildcard", "Deleting root with wildcard"),
-    (r'mkfs\.', "mkfs", "Formatting filesystem"),
-    (r':\(\)\{.*:\|:.*\}.*;:', "fork_bomb", "Fork bomb pattern"),
+    (r"rm\s+(-rf|--recursive.*--force)\s+/\s*$", "rm_rf_root", "Deleting root directory"),
+    (r"rm\s+(-rf|--recursive.*--force)\s+/\*", "rm_rf_root_wildcard", "Deleting root with wildcard"),
+    (r"mkfs\.", "mkfs", "Formatting filesystem"),
+    (r":\(\)\{.*:\|:.*\}.*;:", "fork_bomb", "Fork bomb pattern"),
 ]
 
 # Day 2: Interactive command patterns (AI reasoning failure - wrong tool selected)
 # These commands require user interaction and will hang in headless/MCP environments
 INTERACTIVE_COMMAND_PATTERNS = [
-    (r'\b(vim|vi|nano|emacs)\b', "text_editor", "Use safe_edit tool instead"),
-    (r'\b(python|python3|node|irb|ghci)\b\s*$', "repl_environment", "Execute scripts directly: python script.py"),
-    (r'\bssh\b\s+[\w@]+\s*$', "ssh_interactive", "Use ssh with explicit command or -N/-f flags"),
-    (r'\b(apt|yum|dnf|pacman)\b\s+(install|remove|upgrade)(?!\s+-y)', "package_manager", "Use -y flag for non-interactive"),
-    (r'\bsudo\b(?!\s+-[nS])', "sudo_interactive", "Use sudo -n for non-interactive or configure NOPASSWD"),
+    (r"\b(vim|vi|nano|emacs)\b", "text_editor", "Use safe_edit tool instead"),
+    (r"\b(python|python3|node|irb|ghci)\b\s*$", "repl_environment", "Execute scripts directly: python script.py"),
+    (r"\bssh\b\s+[\w@]+\s*$", "ssh_interactive", "Use ssh with explicit command or -N/-f flags"),
+    (r"\b(apt|yum|dnf|pacman)\b\s+(install|remove|upgrade)(?!\s+-y)", "package_manager", "Use -y flag for non-interactive"),
+    (r"\bsudo\b(?!\s+-[nS])", "sudo_interactive", "Use sudo -n for non-interactive or configure NOPASSWD"),
 ]
 
 # Day 2: Timeout limits (防止交互命令无限等待)
@@ -96,17 +96,16 @@ MAX_TIMEOUT_SECONDS = 300  # 5 minutes hard limit
 # These detect contextual reasoning failures (范围误判、目标混淆) requiring user confirmation
 CONFIRMATION_REQUIRED_PATTERNS = [
     # P0: Wildcard delete (highest risk - user explicitly requested in feedback)
-    (r'rm\s+-rf?\s+.*\*', "wildcard_delete", "high",
-     "Deleting with wildcard - please confirm exact targets"),
-
+    (r"rm\s+-rf?\s+.*\*", "wildcard_delete", "high", "Deleting with wildcard - please confirm exact targets"),
     # P1: Delete current directory
-    (r'rm\s+-rf?\s+\./?$', "delete_current_dir", "high",
-     "Deleting current directory - please confirm"),
-
+    (r"rm\s+-rf?\s+\./?$", "delete_current_dir", "high", "Deleting current directory - please confirm"),
     # P2: Delete source code directories
-    (r'rm\s+-rf?\s+\./(src|lib|pkg|app|server|client)/?$',
-     "delete_source_dir", "medium",
-     "Deleting source code directory - please confirm"),
+    (
+        r"rm\s+-rf?\s+\./(src|lib|pkg|app|server|client)/?$",
+        "delete_source_dir",
+        "medium",
+        "Deleting source code directory - please confirm",
+    ),
 ]
 
 
@@ -146,11 +145,7 @@ class SafeExecWrapper:
         if not working_path.is_dir():
             raise _create_violation_error(
                 field="working_dir",
-                message=(
-                    f"Invalid working directory: {working_dir}\n"
-                    f"Resolved to: {working_path}\n"
-                    f"This is not a directory."
-                ),
+                message=(f"Invalid working directory: {working_dir}\n" f"Resolved to: {working_path}\n" f"This is not a directory."),
             )
 
         self.working_dir = str(working_path)
@@ -211,7 +206,8 @@ class SafeExecWrapper:
 
             result = subprocess.run(
                 command,
-                check=False, shell=True,
+                check=False,
+                shell=True,
                 cwd=self.working_dir,
                 timeout=timeout,
                 capture_output=True,
@@ -220,7 +216,7 @@ class SafeExecWrapper:
 
             exec_duration = (time.perf_counter() - exec_start) * 1000
             total_duration = precondition_time + exec_duration
-            
+
             # Day 2: Calculate actual duration and suggested timeout
             actual_duration_sec = exec_duration / 1000
             suggested_timeout = None
@@ -228,7 +224,7 @@ class SafeExecWrapper:
             # If execution took > 80% of timeout, suggest increase
             if actual_duration_sec > timeout * 0.8:
                 suggested_timeout = math.ceil(actual_duration_sec * 1.5)
-            
+
             # Day 2: Truncate output (head 50 + tail 50)
             stdout_truncated = self._truncate_output(result.stdout)
             stderr_truncated = self._truncate_output(result.stderr)
@@ -249,10 +245,10 @@ class SafeExecWrapper:
 
         except subprocess.TimeoutExpired as e:
             total_duration = (time.perf_counter() - start_time) * 1000
-            
+
             # Day 2: Suggest 2x timeout on timeout
             suggested_timeout = timeout * 2
-            
+
             return ExecutionResult(
                 success=False,
                 exit_code=-1,
@@ -294,7 +290,7 @@ class SafeExecWrapper:
         if not output:
             return output
 
-        lines = output.split('\n')
+        lines = output.split("\n")
 
         # If output is short enough, return as-is
         if len(lines) <= max_lines * 2:
@@ -307,7 +303,7 @@ class SafeExecWrapper:
 
         omission_marker = f"\n... ({omitted_count} lines omitted) ...\n"
 
-        return '\n'.join(head) + omission_marker + '\n'.join(tail)
+        return "\n".join(head) + omission_marker + "\n".join(tail)
 
     def _check_confirmation_required(self, command: str) -> Optional[dict]:
         """
@@ -376,12 +372,9 @@ class SafeExecWrapper:
         if timeout <= 0:
             raise _create_violation_error(
                 field="timeout",
-                message=(
-                    f"Invalid timeout: {timeout}s\n"
-                    f"Timeout must be greater than 0 seconds."
-                ),
+                message=(f"Invalid timeout: {timeout}s\n" f"Timeout must be greater than 0 seconds."),
             )
-        
+
         if timeout > MAX_TIMEOUT_SECONDS:
             raise _create_violation_error(
                 field="timeout",
@@ -391,7 +384,7 @@ class SafeExecWrapper:
                     f"If you need longer execution, consider breaking into smaller steps."
                 ),
             )
-        
+
         # Check 1: Detect absurd commands (AI reasoning failure signal)
         for pattern, pattern_name, description in ABSURD_COMMAND_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
@@ -408,7 +401,7 @@ class SafeExecWrapper:
                         f"AI reasoning has gone off track to avoid wasting tokens."
                     ),
                 )
-        
+
         # Check 2: Detect interactive commands (Day 2 - AI reasoning failure)
         for pattern, pattern_name, suggestion in INTERACTIVE_COMMAND_PATTERNS:
             if re.search(pattern, command, re.IGNORECASE):
@@ -432,17 +425,14 @@ class SafeExecWrapper:
         if not command_parts:
             raise _create_violation_error(
                 field="command",
-                message=(
-                    "Empty command provided.\n"
-                    "Please specify a command to execute."
-                ),
+                message=("Empty command provided.\n" "Please specify a command to execute."),
             )
 
         base_command = command_parts[0]
 
         # Skip shell built-ins and complex expressions
-        shell_builtins = {'cd', 'echo', 'export', 'set', 'pwd', 'test', '[', 'exit'}
-        if base_command not in shell_builtins and '|' not in command and '>' not in command:
+        shell_builtins = {"cd", "echo", "export", "set", "pwd", "test", "[", "exit"}
+        if base_command not in shell_builtins and "|" not in command and ">" not in command:
             if not shutil.which(base_command):
                 raise _create_violation_error(
                     field="command",

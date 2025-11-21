@@ -86,7 +86,7 @@ class SafeSearchWrapper:
         **kwargs,
     ) -> dict[str, Any]:
         """Search codebase with area detection and budget limits.
-        
+
         Automatically detects project areas, routes queries, and applies constraints.
         """
         # 1. 检测项目区域

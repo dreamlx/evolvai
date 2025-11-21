@@ -310,7 +310,7 @@ class ToolRegistry:
             import evolvai.tools.safe_exec_tool  # noqa: F401
         except ImportError:
             pass  # evolvai tools may not be available in all environments
-        
+
         self._tool_dict: dict[str, RegisteredTool] = {}
         for cls in iter_subclasses(Tool):
             # Include tools from both serena.tools and evolvai.tools

@@ -38,7 +38,7 @@ class SafeExecWrapper:
             "successful_executions": 0,
             "failed_executions": 0,
             "blocked_executions": 0,
-            "total_duration_ms": 0.0
+            "total_duration_ms": 0.0,
         }
 
     def safe_exec(
@@ -49,7 +49,7 @@ class SafeExecWrapper:
         required_permissions: Optional[list] = None,
         system_dependencies: Optional[list] = None,
         environment_variables: Optional[dict] = None,
-        risk_level: ExecutionRiskLevel = ExecutionRiskLevel.MEDIUM
+        risk_level: ExecutionRiskLevel = ExecutionRiskLevel.MEDIUM,
     ) -> ExecutionResult:
         """
         安全执行命令
@@ -84,7 +84,7 @@ class SafeExecWrapper:
                 required_permissions=required_permissions,
                 system_dependencies=system_dependencies,
                 environment_variables=environment_variables,
-                risk_level=risk_level
+                risk_level=risk_level,
             )
 
             # 2. 检查前置条件
@@ -101,7 +101,7 @@ class SafeExecWrapper:
                     precondition_passed=False,
                     command=command,
                     working_directory=working_directory,
-                    error_message=error_message
+                    error_message=error_message,
                 )
 
             # 3. 执行命令
@@ -133,7 +133,7 @@ class SafeExecWrapper:
                 precondition_passed=False,
                 command=command,
                 working_directory=working_directory,
-                error_message=f"Safe execution failed: {e!s}"
+                error_message=f"Safe execution failed: {e!s}",
             )
 
     def _check_preconditions(self, precondition: ExecutionPrecondition):
@@ -143,17 +143,11 @@ class SafeExecWrapper:
     def _execute_command(self, precondition: ExecutionPrecondition) -> ExecutionResult:
         """执行命令"""
         # 创建进程
-        process_info = self.process_manager.create_process(
-            command=precondition.command,
-            working_directory=precondition.working_directory
-        )
+        process_info = self.process_manager.create_process(command=precondition.command, working_directory=precondition.working_directory)
 
         try:
             # 等待执行完成
-            result = self.process_manager.wait_with_timeout(
-                process_info=process_info,
-                timeout_seconds=precondition.timeout_seconds
-            )
+            result = self.process_manager.wait_with_timeout(process_info=process_info, timeout_seconds=precondition.timeout_seconds)
 
             # 设置工作目录到结果中
             result.working_directory = precondition.working_directory
@@ -180,11 +174,11 @@ class SafeExecWrapper:
                 "exit_code": result.exit_code,
                 "duration_ms": result.duration_ms,
                 "timeout_occurred": result.timeout_occurred,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
 
             # 如果有执行引擎，记录到审计日志
-            if self.agent and hasattr(self.agent, 'execution_engine'):
+            if self.agent and hasattr(self.agent, "execution_engine"):
                 self.agent.execution_engine.log_execution(audit_data)
             else:
                 # 简单的控制台输出
@@ -200,12 +194,8 @@ class SafeExecWrapper:
 
         # 计算成功率
         if stats["total_executions"] > 0:
-            stats["success_rate"] = (
-                stats["successful_executions"] / stats["total_executions"]
-            )
-            stats["average_duration_ms"] = (
-                stats["total_duration_ms"] / stats["total_executions"]
-            )
+            stats["success_rate"] = stats["successful_executions"] / stats["total_executions"]
+            stats["average_duration_ms"] = stats["total_duration_ms"] / stats["total_executions"]
         else:
             stats["success_rate"] = 0.0
             stats["average_duration_ms"] = 0.0

@@ -14,7 +14,7 @@ from serena.tools.tools_base import Tool
 
 class BatchEditTool(Tool):
     """Batch edit files using regex patterns with ExecutionPlan constraints.
-    
+
     Supports preview mode, automatic rollback, and unified diff generation.
     Use for multi-file text pattern replacements (Level 1 operations).
     See docs/guides/tool-usage.md for tool selection guidance.
@@ -28,9 +28,9 @@ class BatchEditTool(Tool):
         preview: bool = False,
         execution_plan: Optional[ExecutionPlan] = None,
     ) -> str:
-        """Batch edit files using regex patterns with preview and rollback.
-        
-        Supports capture groups (\\1, \\2), glob filtering, and ExecutionPlan constraints.
+        r"""Batch edit files using regex patterns with preview and rollback.
+
+        Supports capture groups (\1, \2), glob filtering, and ExecutionPlan constraints.
         Returns JSON with affected_files, changes_count, unified_diff, and rollback_id.
         """
         # Get project root for BatchEditor

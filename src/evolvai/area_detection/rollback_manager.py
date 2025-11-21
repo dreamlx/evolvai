@@ -52,6 +52,7 @@ class RollbackManager:
 
             # 确保备份目录存在
             import os
+
             os.makedirs(str(backup_path.parent), exist_ok=True)
 
             # 总是尝试复制文件（即使原始文件不存在，也会复制空内容或失败）
@@ -59,38 +60,37 @@ class RollbackManager:
                 shutil.copy2(file_path, backup_path)
             except FileNotFoundError:
                 # 如果原始文件不存在，创建空备份文件
-                backup_path.write_text("", encoding='utf-8')
-            except Exception as e:
+                backup_path.write_text("", encoding="utf-8")
+            except Exception:
                 # 其他错误也创建空备份文件
-                backup_path.write_text("", encoding='utf-8')
+                backup_path.write_text("", encoding="utf-8")
 
             duration = (time.time() - start_time) * 1000
             self._record_performance("file_backup", duration)
 
             # 记录回滚历史
-            self.rollback_history.append({
-                "type": "file_backup",
-                "original_path": file_path,
-                "backup_path": str(backup_path),
-                "timestamp": datetime.now().isoformat(),
-                "strategy": RollbackStrategy.FILE_BACKUP
-            })
+            self.rollback_history.append(
+                {
+                    "type": "file_backup",
+                    "original_path": file_path,
+                    "backup_path": str(backup_path),
+                    "timestamp": datetime.now().isoformat(),
+                    "strategy": RollbackStrategy.FILE_BACKUP,
+                }
+            )
 
             return RollbackResult(
                 success=True,
                 strategy=RollbackStrategy.FILE_BACKUP,
                 message=f"File backup successful: {backup_path}",
                 rollback_hash=str(backup_path),
-                duration_ms=duration
+                duration_ms=duration,
             )
 
         except Exception as e:
             duration = (time.time() - start_time) * 1000
             return RollbackResult(
-                success=False,
-                strategy=RollbackStrategy.FILE_BACKUP,
-                error_message=f"File backup failed: {e!s}",
-                duration_ms=duration
+                success=False, strategy=RollbackStrategy.FILE_BACKUP, error_message=f"File backup failed: {e!s}", duration_ms=duration
             )
 
     def rollback_file_backup(self, backup_path: str, original_path: str) -> RollbackResult:
@@ -109,14 +109,12 @@ class RollbackManager:
 
         try:
             import os
-            backup_obj = Path(backup_path)
+
             original_obj = Path(original_path)
 
             if not os.path.exists(backup_path):
                 return RollbackResult(
-                    success=False,
-                    strategy=RollbackStrategy.FILE_BACKUP,
-                    error_message=f"Backup file not found: {backup_path}"
+                    success=False, strategy=RollbackStrategy.FILE_BACKUP, error_message=f"Backup file not found: {backup_path}"
                 )
 
             # 确保原始文件目录存在
@@ -143,23 +141,16 @@ class RollbackManager:
                 success=True,
                 strategy=RollbackStrategy.FILE_BACKUP,
                 message=f"File rollback successful: {original_path}",
-                duration_ms=duration
+                duration_ms=duration,
             )
 
         except Exception as e:
             duration = (time.time() - start_time) * 1000
             return RollbackResult(
-                success=False,
-                strategy=RollbackStrategy.FILE_BACKUP,
-                error_message=f"File rollback failed: {e!s}",
-                duration_ms=duration
+                success=False, strategy=RollbackStrategy.FILE_BACKUP, error_message=f"File rollback failed: {e!s}", duration_ms=duration
             )
 
-    def file_backup_rollback(
-        self,
-        file_path: str,
-        backup_path: str
-    ) -> RollbackResult:
+    def file_backup_rollback(self, file_path: str, backup_path: str) -> RollbackResult:
         """
         文件备份回滚（别名方法，为了测试兼容性）
 
@@ -173,47 +164,39 @@ class RollbackManager:
         """
         return self.rollback_file_backup(backup_path, file_path)
 
-    def multiple_file_rollback(
-            self,
-            files_to_rollback: list[dict[str, str]]
-        ) -> list[RollbackResult]:
-            """
-            多文件回滚
-    
-            Args:
-                files_to_rollback: 要回滚的文件列表，每个元素包含 {"file": "original_path", "backup": "backup_path"}
-    
-            Returns:
-                List[RollbackResult]: 回滚结果列表
+    def multiple_file_rollback(self, files_to_rollback: list[dict[str, str]]) -> list[RollbackResult]:
+        """
+        多文件回滚
 
-            """
-            results: list[RollbackResult] = []
-    
-            for file_info in files_to_rollback:
-                original_path = file_info.get("file")
-                backup_path = file_info.get("backup")
-    
-                if not original_path or not backup_path:
-                    results.append(RollbackResult(
-                        success=False,
-                        strategy=RollbackStrategy.FILE_BACKUP,
-                        error_message="Missing file or backup path"
-                    ))
-                    continue
-    
-                result = self.file_backup_rollback(backup_path, original_path)
-                results.append(result)
-    
-                # 如果回滚失败，停止后续操作（根据测试预期）
-                if not result.success:
-                    break
-    
-            return results
+        Args:
+            files_to_rollback: 要回滚的文件列表，每个元素包含 {"file": "original_path", "backup": "backup_path"}
 
-    def create_backup(
-        self,
-        file_path: str
-    ) -> str:
+        Returns:
+            List[RollbackResult]: 回滚结果列表
+
+        """
+        results: list[RollbackResult] = []
+
+        for file_info in files_to_rollback:
+            original_path = file_info.get("file")
+            backup_path = file_info.get("backup")
+
+            if not original_path or not backup_path:
+                results.append(
+                    RollbackResult(success=False, strategy=RollbackStrategy.FILE_BACKUP, error_message="Missing file or backup path")
+                )
+                continue
+
+            result = self.file_backup_rollback(backup_path, original_path)
+            results.append(result)
+
+            # 如果回滚失败，停止后续操作（根据测试预期）
+            if not result.success:
+                break
+
+        return results
+
+    def create_backup(self, file_path: str) -> str:
         """
         创建备份并返回备份路径（为了测试兼容性）
 
@@ -246,50 +229,41 @@ class RollbackManager:
 
         try:
             # 执行回滚
-            cmd = ['git', 'reset', '--hard', commit_hash]
+            cmd = ["git", "reset", "--hard", commit_hash]
             if message:
-                cmd.extend(['-m', message])
+                cmd.extend(["-m", message])
 
-            result = subprocess.run(
-                cmd,
-                check=False, capture_output=True,
-                text=True
-            )
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
             if result.returncode != 0:
-                return RollbackResult(
-                    success=False,
-                    strategy=RollbackStrategy.GIT,
-                    error_message=result.stderr or "Git rollback failed"
-                )
+                return RollbackResult(success=False, strategy=RollbackStrategy.GIT, error_message=result.stderr or "Git rollback failed")
 
             duration = (time.time() - start_time) * 1000
             self._record_performance("git_rollback", duration)
 
             # 记录回滚历史
-            self.rollback_history.append({
-                "type": "git_rollback",
-                "commit_hash": commit_hash,
-                "message": message,
-                "timestamp": datetime.now().isoformat(),
-                "strategy": RollbackStrategy.GIT
-            })
+            self.rollback_history.append(
+                {
+                    "type": "git_rollback",
+                    "commit_hash": commit_hash,
+                    "message": message,
+                    "timestamp": datetime.now().isoformat(),
+                    "strategy": RollbackStrategy.GIT,
+                }
+            )
 
             return RollbackResult(
                 success=True,
                 strategy=RollbackStrategy.GIT,
                 message=f"Git rollback successful to commit: {commit_hash}",
                 rollback_hash=commit_hash,
-                duration_ms=duration
+                duration_ms=duration,
             )
 
         except Exception as e:
             duration = (time.time() - start_time) * 1000
             return RollbackResult(
-                success=False,
-                strategy=RollbackStrategy.GIT,
-                error_message=f"Git rollback failed: {e!s}",
-                duration_ms=duration
+                success=False, strategy=RollbackStrategy.GIT, error_message=f"Git rollback failed: {e!s}", duration_ms=duration
             )
 
     def git_revert(self, commit_hash: str, message: Optional[str] = None) -> RollbackResult:
@@ -307,22 +281,14 @@ class RollbackManager:
         start_time = time.time()
 
         try:
-            cmd = ['git', 'revert', '--no-edit', commit_hash]
+            cmd = ["git", "revert", "--no-edit", commit_hash]
             if message:
-                cmd.extend(['-m', message])
+                cmd.extend(["-m", message])
 
-            result = subprocess.run(
-                cmd,
-                check=False, capture_output=True,
-                text=True
-            )
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
             if result.returncode != 0:
-                return RollbackResult(
-                    success=False,
-                    strategy=RollbackStrategy.GIT,
-                    error_message=f"Git revert failed: {result.stderr}"
-                )
+                return RollbackResult(success=False, strategy=RollbackStrategy.GIT, error_message=f"Git revert failed: {result.stderr}")
 
             duration = (time.time() - start_time) * 1000
             self._record_performance("git_revert", duration)
@@ -332,23 +298,16 @@ class RollbackManager:
                 strategy=RollbackStrategy.GIT,
                 message=f"Git revert successful: {commit_hash}",
                 rollback_hash=commit_hash,
-                duration_ms=duration
+                duration_ms=duration,
             )
 
         except Exception as e:
             duration = (time.time() - start_time) * 1000
             return RollbackResult(
-                success=False,
-                strategy=RollbackStrategy.GIT,
-                error_message=f"Git revert失败: {e!s}",
-                duration_ms=duration
+                success=False, strategy=RollbackStrategy.GIT, error_message=f"Git revert失败: {e!s}", duration_ms=duration
             )
 
-    def batch_rollback(
-        self,
-        operations: list[tuple[str, str, RollbackStrategy]],
-        auto_strategy: bool = True
-    ) -> list[RollbackResult]:
+    def batch_rollback(self, operations: list[tuple[str, str, RollbackStrategy]], auto_strategy: bool = True) -> list[RollbackResult]:
         """
         批量回滚操作
 
@@ -379,11 +338,7 @@ class RollbackManager:
 
         return results
 
-    def smart_rollback(
-        self,
-        file_path: str,
-        operation_type: str = "edit"
-    ) -> RollbackResult:
+    def smart_rollback(self, file_path: str, operation_type: str = "edit") -> RollbackResult:
         """
         智能回滚（自动选择最佳策略）
 
@@ -399,11 +354,7 @@ class RollbackManager:
         if self._is_git_repo():
             try:
                 # 检查最近的提交
-                result = subprocess.run(
-                    ['git', 'log', '-1', '--oneline'],
-                    check=False, capture_output=True,
-                    text=True
-                )
+                result = subprocess.run(["git", "log", "-1", "--oneline"], check=False, capture_output=True, text=True)
 
                 if result.returncode == 0:
                     commit_hash = result.stdout.split()[0]
@@ -422,11 +373,7 @@ class RollbackManager:
             return self.rollback_file_backup(str(latest_backup), file_path)
 
         # 没有找到回滚策略
-        return RollbackResult(
-            success=False,
-            strategy=RollbackStrategy.AUTO,
-            error_message="No available rollback strategy found"
-        )
+        return RollbackResult(success=False, strategy=RollbackStrategy.AUTO, error_message="No available rollback strategy found")
 
     def get_rollback_history(self, limit: Optional[int] = None) -> list[dict]:
         """
@@ -460,12 +407,7 @@ class RollbackManager:
 
         for operation, times in self.performance_metrics.items():
             if times:
-                metrics[operation] = {
-                    "min": min(times),
-                    "max": max(times),
-                    "avg": sum(times) / len(times),
-                    "count": len(times)
-                }
+                metrics[operation] = {"min": min(times), "max": max(times), "avg": sum(times) / len(times), "count": len(times)}
 
         return metrics
 
@@ -478,18 +420,14 @@ class RollbackManager:
     def _is_git_repo(self) -> bool:
         """检查当前目录是否为Git仓库"""
         try:
-            result = subprocess.run(
-                ['git', 'rev-parse', '--is-inside-work-tree'],
-                check=False, capture_output=True,
-                text=True
-            )
+            result = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], check=False, capture_output=True, text=True)
             return result.returncode == 0
         except Exception:
             return False
 
     def _is_git_repository(self) -> bool:
-            """检查当前目录是否为Git仓库（别名方法，为了测试兼容性）"""
-            return self._is_git_repo()
+        """检查当前目录是否为Git仓库（别名方法，为了测试兼容性）"""
+        return self._is_git_repo()
 
     def _select_rollback_strategy(self, identifier: str) -> RollbackStrategy:
         """
@@ -503,7 +441,7 @@ class RollbackManager:
 
         """
         # 如果看起来像Git哈希，使用Git策略
-        if len(identifier) >= 7 and all(c in '0123456789abcdef' for c in identifier.lower()):
+        if len(identifier) >= 7 and all(c in "0123456789abcdef" for c in identifier.lower()):
             return RollbackStrategy.GIT
 
         # 否则使用文件备份策略
@@ -526,17 +464,17 @@ class RollbackManager:
 
         """
         import glob
-        
+
         target_backup_dir = backup_dir or self.backup_dir
-        
+
         if max_backups is not None:
             # 按数量限制清理
             backup_pattern = os.path.join(target_backup_dir, "*.backup")
             backup_files = glob.glob(backup_pattern)
-            
+
             # 按修改时间排序，最新的在前
             backup_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-            
+
             # 删除超出数量限制的文件
             for backup_file in backup_files[max_backups:]:
                 try:
@@ -547,7 +485,7 @@ class RollbackManager:
             # 按时间限制清理
             cutoff_time = time.time() - (max_age_days * 24 * 60 * 60)
             backup_pattern = os.path.join(target_backup_dir, "*.backup")
-            
+
             for backup_file in glob.glob(backup_pattern):
                 if os.path.getmtime(backup_file) < cutoff_time:
                     try:

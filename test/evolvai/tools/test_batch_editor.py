@@ -37,12 +37,7 @@ class TestBatchEditorCore:
 
         # Execute: batch_edit without preview
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"getUserData",
-            replacement="fetchUserData",
-            scope="*.py",
-            preview=False  # Apply directly
-        )
+        result = editor.batch_edit(pattern=r"getUserData", replacement="fetchUserData", scope="*.py", preview=False)  # Apply directly
 
         # Assert: All files updated
         assert result.success is True
@@ -81,12 +76,7 @@ class TestBatchEditorCore:
 
         # Execute: batch_edit with preview=True
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"OldName(\d+)",
-            replacement=r"NewName\1",
-            scope="*.py",
-            preview=True  # Preview only
-        )
+        result = editor.batch_edit(pattern=r"OldName(\d+)", replacement=r"NewName\1", scope="*.py", preview=True)  # Preview only
 
         # Assert: Preview returned, no changes applied
         assert result.success is True
@@ -125,17 +115,10 @@ class TestBatchEditorCore:
         # Execute: batch_edit with max_files=3 constraint
         editor = BatchEditor(project_root=tmp_path)
         plan = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP),
-            limits=ExecutionLimits(max_files=3, max_changes=100)
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP), limits=ExecutionLimits(max_files=3, max_changes=100)
         )
 
-        result = editor.batch_edit(
-            pattern=r"value",
-            replacement="result",
-            scope="*.py",
-            preview=False,
-            execution_plan=plan
-        )
+        result = editor.batch_edit(pattern=r"value", replacement="result", scope="*.py", preview=False, execution_plan=plan)
 
         # Assert: Constraint violation
         assert result.success is False
@@ -165,17 +148,10 @@ class TestBatchEditorCore:
         # Execute: batch_edit with max_changes=2 constraint
         editor = BatchEditor(project_root=tmp_path)
         plan = ExecutionPlan(
-            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP),
-            limits=ExecutionLimits(max_files=10, max_changes=2)
+            rollback=RollbackStrategy(strategy=RollbackStrategyType.FILE_BACKUP), limits=ExecutionLimits(max_files=10, max_changes=2)
         )
 
-        result = editor.batch_edit(
-            pattern=r"foo",
-            replacement="bar",
-            scope="*.py",
-            preview=False,
-            execution_plan=plan
-        )
+        result = editor.batch_edit(pattern=r"foo", replacement="bar", scope="*.py", preview=False, execution_plan=plan)
 
         # Assert: Constraint violation
         assert result.success is False
@@ -224,13 +200,8 @@ class TestBatchEditorCore:
                 raise PermissionError("Simulated write failure")
             return original_write(self, *args, **kwargs)
 
-        with patch.object(Path, 'write_text', mock_write):
-            result = editor.batch_edit(
-                pattern=r"old_value",
-                replacement="new_value",
-                scope="*.py",
-                preview=False
-            )
+        with patch.object(Path, "write_text", mock_write):
+            result = editor.batch_edit(pattern=r"old_value", replacement="new_value", scope="*.py", preview=False)
 
         # Assert: Failure with rollback
         assert result.success is False
@@ -243,14 +214,14 @@ class TestBatchEditorCore:
         assert "old_value" in file3.read_text()
 
     def test_regex_pattern_with_capture_groups(self, tmp_path):
-        """测试正则表达式捕获组
+        r"""测试正则表达式捕获组
 
         Story: 2.2 - Batch Edit System
         Scenario: Complex regex refactoring
         DoD: F3 - Regex capture groups working
 
         Given files with pattern "function_name_v1"
-        When batch_edit(pattern=r"(\\w+)_v1", replacement=r"\1_v2")
+        When batch_edit(pattern=r"(\w+)_v1", replacement=r"\1_v2")
         Then capture groups preserved in replacement
         And files updated correctly
         """
@@ -265,12 +236,7 @@ class TestBatchEditorCore:
 
         # Execute: batch_edit with capture group
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"(\w+)_v1",
-            replacement=r"\1_v2",
-            scope="*.py",
-            preview=False
-        )
+        result = editor.batch_edit(pattern=r"(\w+)_v1", replacement=r"\1_v2", scope="*.py", preview=False)
 
         # Assert: Changes applied with capture groups
         assert result.success is True
@@ -304,12 +270,7 @@ class TestBatchEditorEdgeCases:
 
         # Execute: batch_edit with non-matching pattern
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"nonexistent_pattern",
-            replacement="something",
-            scope="*.py",
-            preview=False
-        )
+        result = editor.batch_edit(pattern=r"nonexistent_pattern", replacement="something", scope="*.py", preview=False)
 
         # Assert: Empty result
         assert result.success is True
@@ -335,12 +296,7 @@ class TestBatchEditorEdgeCases:
 
         # Execute: batch_edit with *.py scope
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"value",
-            replacement="result",
-            scope="*.py",
-            preview=False
-        )
+        result = editor.batch_edit(pattern=r"value", replacement="result", scope="*.py", preview=False)
 
         # Assert: Only .py file modified
         assert result.success is True
@@ -367,12 +323,7 @@ class TestBatchEditorEdgeCases:
 
         # Execute: batch_edit with invalid regex
         editor = BatchEditor(project_root=tmp_path)
-        result = editor.batch_edit(
-            pattern=r"[invalid(regex",  # Invalid regex
-            replacement="something",
-            scope="*.py",
-            preview=False
-        )
+        result = editor.batch_edit(pattern=r"[invalid(regex", replacement="something", scope="*.py", preview=False)  # Invalid regex
 
         # Assert: Error handled
         assert result.success is False

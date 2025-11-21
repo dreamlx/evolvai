@@ -22,7 +22,7 @@ Class vs Method Docstrings:
 Example Structure:
     def apply(self, ...) -> str:
         \"\"\"[One-line capability statement].
-        
+
         [1-2 lines key constraints/features]
         [Optional: Returns/output format]
         \"\"\"
@@ -57,7 +57,7 @@ from serena.tools.tools_base import Tool
 
 class YourToolTemplate(Tool):
     """[Brief tool description for developers].
-    
+
     This class docstring is NOT transmitted by MCP.
     You can be more descriptive here if needed for human developers.
     See docs/guides/tool-usage.md for usage guidance.
@@ -71,7 +71,7 @@ class YourToolTemplate(Tool):
         execution_plan: Optional[ExecutionPlan] = None,
     ) -> str:
         """[One-line capability statement with key constraint].
-        
+
         [Optional: 1-2 lines about returns or critical behavior]
         """
         # Implementation here

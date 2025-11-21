@@ -38,7 +38,7 @@ class ProcessManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                preexec_fn=os.setpgrp  # 创建新的进程组
+                start_new_session=True,  # 创建新的进程组（比 preexec_fn 更安全）
             )
 
             # 获取进程组ID，如果失败则使用PID作为PGID（为了测试兼容性）
@@ -48,12 +48,7 @@ class ProcessManager:
                 pgid = process.pid
 
             process_info = ProcessInfo(
-                pid=process.pid,
-                pgid=pgid,
-                command=command,
-                start_time=time.time(),
-                is_running=True,
-                children_pids=[]
+                pid=process.pid, pgid=pgid, command=command, start_time=time.time(), is_running=True, children_pids=[]
             )
 
             self.active_processes[process.pid] = process_info
@@ -75,11 +70,9 @@ class ProcessManager:
 
         """
         start_time = time.time()
-        timeout_occurred = False
 
         # 如果超时时间太短，直接触发超时（用于测试）
         if timeout_seconds < 1:
-            timeout_occurred = True
             self._kill_process_group(process_info.pgid)
             duration_ms = (time.time() - start_time) * 1000
 
@@ -93,7 +86,7 @@ class ProcessManager:
                 command=process_info.command,
                 working_directory="",
                 timeout_occurred=True,
-                error_message=f"Process timeout after {timeout_seconds}s"
+                error_message=f"Process timeout after {timeout_seconds}s",
             )
 
         try:
@@ -112,12 +105,11 @@ class ProcessManager:
                 precondition_passed=True,  # 由调用方设置
                 command=process_info.command,
                 working_directory="",  # 由调用方设置
-                timeout_occurred=False
+                timeout_occurred=False,
             )
 
         except subprocess.TimeoutExpired:
             # 超时处理
-            timeout_occurred = True
             self._kill_process_group(process_info.pgid)
 
             duration_ms = (time.time() - start_time) * 1000
@@ -132,7 +124,7 @@ class ProcessManager:
                 command=process_info.command,
                 working_directory="",
                 timeout_occurred=True,
-                error_message=f"Process timeout after {timeout_seconds}s"
+                error_message=f"Process timeout after {timeout_seconds}s",
             )
 
         except Exception as e:
@@ -146,7 +138,7 @@ class ProcessManager:
                 precondition_passed=True,
                 command=process_info.command,
                 working_directory="",
-                error_message=f"Process error: {e!s}"
+                error_message=f"Process error: {e!s}",
             )
 
         finally:
@@ -184,12 +176,7 @@ class ProcessManager:
         # 为了KISS原则，使用psutil或直接查询
         try:
             # 重新创建进程对象用于通信
-            process = subprocess.Popen(
-                ["ps", "-p", str(pid), "-o", "pid="],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            process = subprocess.Popen(["ps", "-p", str(pid), "-o", "pid="], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             return process
         except Exception:
             raise RuntimeError(f"Process {pid} not found")
