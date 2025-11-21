@@ -256,9 +256,7 @@ class BatchEditor:
         # 检查max_changes约束
         total_changes = sum(change.match_count for change in changes)
         if total_changes > plan.limits.max_changes:
-            return (
-                f"ExecutionPlan constraint violation: " f"Attempting {total_changes} changes, " f"but max_changes={plan.limits.max_changes}"
-            )
+            return f"ExecutionPlan constraint violation: Attempting {total_changes} changes, but max_changes={plan.limits.max_changes}"
 
         return None
 

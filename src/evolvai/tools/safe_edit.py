@@ -252,7 +252,7 @@ class SafeEditTool:
                 current_hash = hashlib.md5(current_content.encode()).hexdigest()
                 if current_hash != change["hash"]:
                     raise PatchOutdatedError(
-                        f"File '{change['file']}' has changed since propose_edit. " "Please re-run propose_edit to get updated diff."
+                        f"File '{change['file']}' has changed since propose_edit. Please re-run propose_edit to get updated diff."
                     )
 
         # 4. 创建备份（用于回滚）

@@ -70,9 +70,9 @@ class TestProposeEdit:
         # DoD F1.6: 原文件未被修改
         assert test_file.read_text() == original_content
 
-        # DoD F1.7: patch保存到内存
-        assert result.patch_id in editor.patch_store
-        stored_patch = editor.patch_store[result.patch_id]
+        # DoD F1.7: patch保存到持久化存储
+        stored_patch = editor._load_patch(result.patch_id)
+        assert stored_patch is not None
         assert stored_patch.unified_diff == result.unified_diff
 
     def test_propose_multi_file_edit_with_scope(self, tmp_path):

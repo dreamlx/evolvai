@@ -294,7 +294,7 @@ class PatchEditor:
             if worktree_path and Path(worktree_path).exists():
                 shutil.rmtree(worktree_path)
 
-            if isinstance(e, (PatchNotFoundError, PatchConflictError, ValueError, ConstraintViolationError, TimeoutError)):
+            if isinstance(e, PatchNotFoundError | PatchConflictError | ValueError | ConstraintViolationError | TimeoutError):
                 raise
 
             return ApplyResult(success=False, modified_files=[], worktree_path=worktree_path, error_message=str(e))

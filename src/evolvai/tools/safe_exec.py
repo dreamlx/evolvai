@@ -145,7 +145,7 @@ class SafeExecWrapper:
         if not working_path.is_dir():
             raise _create_violation_error(
                 field="working_dir",
-                message=(f"Invalid working directory: {working_dir}\n" f"Resolved to: {working_path}\n" f"This is not a directory."),
+                message=(f"Invalid working directory: {working_dir}\nResolved to: {working_path}\nThis is not a directory."),
             )
 
         self.working_dir = str(working_path)
@@ -372,7 +372,7 @@ class SafeExecWrapper:
         if timeout <= 0:
             raise _create_violation_error(
                 field="timeout",
-                message=(f"Invalid timeout: {timeout}s\n" f"Timeout must be greater than 0 seconds."),
+                message=(f"Invalid timeout: {timeout}s\nTimeout must be greater than 0 seconds."),
             )
 
         if timeout > MAX_TIMEOUT_SECONDS:
@@ -425,7 +425,7 @@ class SafeExecWrapper:
         if not command_parts:
             raise _create_violation_error(
                 field="command",
-                message=("Empty command provided.\n" "Please specify a command to execute."),
+                message=("Empty command provided.\nPlease specify a command to execute."),
             )
 
         base_command = command_parts[0]

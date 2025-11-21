@@ -117,7 +117,7 @@ class TestFeedbackSystem:
             assert hasattr(report, field)
 
         assert isinstance(report.total_results, int)
-        assert isinstance(report.execution_time_ms, (int, float))
+        assert isinstance(report.execution_time_ms, int | float)
 
 
 class TestSafeSearchWrapper:

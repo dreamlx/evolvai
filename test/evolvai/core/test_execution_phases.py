@@ -190,9 +190,11 @@ class TestExecutionPhase:
 
         class LSPFailTool(Tool):
             def apply(self) -> str:
+                from solidlsp.ls_config import Language
+
                 call_count["count"] += 1
                 if call_count["count"] == 1:
-                    cause = LanguageServerTerminatedException("Server terminated")
+                    cause = LanguageServerTerminatedException("Server terminated", language=Language.PYTHON)
                     raise SolidLSPException("Language server terminated", cause=cause)
                 return "success_after_retry"
 

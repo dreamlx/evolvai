@@ -68,7 +68,7 @@ class SafeSearchWrapper:
             # 6. 处理异常并提供LLM友好的反馈
             from evolvai.core.constraint_exceptions import ChangeLimitExceededError, FileLimitExceededError
 
-            if isinstance(e, (FileLimitExceededError, ChangeLimitExceededError)):
+            if isinstance(e, FileLimitExceededError | ChangeLimitExceededError):
                 # Story 1.3约束违规
                 feedback = self.feedback_system.create_constraint_violation_response(e)
                 raise ConstraintViolationError(feedback) from e

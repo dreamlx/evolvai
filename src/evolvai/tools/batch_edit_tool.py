@@ -32,6 +32,26 @@ class BatchEditTool(Tool):
 
         Supports capture groups (\1, \2), glob filtering, and ExecutionPlan constraints.
         Returns JSON with affected_files, changes_count, unified_diff, and rollback_id.
+
+        Note: This is a file-level editing tool. Use preview=True to verify changes
+        before applying. Automatic rollback is available if edits fail.
+
+        Args:
+            pattern: Regular expression pattern to search for
+            replacement: Replacement text (supports \1, \2 capture groups)
+            scope: Glob pattern for file filtering (default: "**/*")
+            preview: If True, show diff without applying changes
+            execution_plan: Optional ExecutionPlan with constraints
+
+        Returns:
+            JSON string with success, affected_files, changes_count, unified_diff, rollback_id
+
+        Examples:
+            >>> # Rename function across codebase
+            >>> batch_edit(pattern=r"oldFunc", replacement="newFunc", scope="**/*.py")
+            >>> # Preview changes before applying
+            >>> batch_edit(pattern=r"TODO", replacement="DONE", preview=True)
+
         """
         # Get project root for BatchEditor
         project_root = Path(self.get_project_root())
