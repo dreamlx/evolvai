@@ -1,172 +1,277 @@
-<p align="center" style="text-align:center">
-  <img src="resources/serena-logo.svg#gh-light-mode-only" style="width:500px">
-  <img src="resources/serena-logo-dark-mode.svg#gh-dark-mode-only" style="width:500px">
-</p>
+# EvolvAI
 
-* :rocket: Serena is a powerful **coding agent toolkit** capable of turning an LLM into a fully-featured agent that works **directly on your codebase**.
-  Unlike most other tools, it is not tied to an LLM, framework or an interface, making it easy to use it in a variety of ways.
-* :wrench: Serena provides essential **semantic code retrieval and editing tools** that are akin to an IDE's capabilities, extracting code entities at the symbol level and exploiting relational structure. When combined with an existing coding agent, these tools greatly enhance (token) efficiency.
-* :free: Serena is **free & open-source**, enhancing the capabilities of LLMs you already have access to free of charge.
+<div align="center">
+  <h3>AI 工具使用策略引擎</h3>
+  <p>让 AI 更聪明地使用工具，而非提供更多工具</p>
 
-You can think of Serena as providing IDE-like tools to your LLM/coding agent. 
-With it, the agent no longer needs to read entire files, perform grep-like searches or basic string replacements to find the right parts of the code and to edit code. 
-Instead, it can use code-centric tools like `find_symbol`, `find_referencing_symbols` and `insert_after_symbol`.
+  [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
+  [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+  [![Tests](https://img.shields.io/badge/Tests-326%20passed-brightgreen.svg)](tests/)
+  [![Based on](https://img.shields.io/badge/Based%20on-Serena-orange.svg)](https://github.com/oraios/serena)
+</div>
 
-<p align="center">
-  <em>Serena is under active development! See the latest updates, upcoming features, and lessons learned to stay up to date.</em>
-</p>
+---
 
-<p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Updates-1e293b?style=flat&logo=rss&logoColor=white&labelColor=1e293b" alt="Changelog" /></a>
-  <a href="roadmap.md"><img src="https://img.shields.io/badge/Roadmap-14532d?style=flat&logo=target&logoColor=white&labelColor=14532d" alt="Roadmap" /></a>
-  <a href="lessons_learned.md"><img src="https://img.shields.io/badge/Lessons-Learned-7c4700?style=flat&logo=readthedocs&logoColor=white&labelColor=7c4700" alt="Lessons Learned" /></a>
-</p>
+## 核心价值
 
-## LLM Integration
+EvolvAI 是基于 [Serena](https://github.com/oraios/serena) 的 AI 工具使用策略引擎，专注于优化 AI 编程助手的工具调用效率。
 
-Serena provides the necessary [tools](https://oraios.github.io/serena/01-about/035_tools.html) for coding workflows, but an LLM is required to do the actual work,
-orchestrating tool use.
+### 优化层次
 
-In general, Serena can be integrated with an LLM in several ways:
-
-* by using the **model context protocol (MCP)**.
-  Serena provides an MCP server which integrates with
-    * Claude Code and Claude Desktop,
-    * terminal-based clients like Codex, Gemini-CLI, Qwen3-Coder, rovodev, OpenHands CLI and others,
-    * IDEs like VSCode, Cursor or IntelliJ,
-    * Extensions like Cline or Roo Code
-    * Local clients like [OpenWebUI](https://docs.openwebui.com/openapi-servers/mcp), [Jan](https://jan.ai/docs/mcp-examples/browser/browserbase#enable-mcp), [Agno](https://docs.agno.com/introduction/playground) and others
-* by using [mcpo to connect it to ChatGPT](docs/03-special-guides/serena_on_chatgpt.md) or other clients that don't support MCP but do support tool calling via OpenAPI.
-* by incorporating Serena's tools into an agent framework of your choice, as illustrated [here](docs/03-special-guides/custom_agent.md).
-  Serena's tool implementation is decoupled from the framework-specific code and can thus easily be adapted to any agent framework.
-
-## Serena in Action
-
-#### Demonstration 1: Efficient Operation in Claude Code
-
-A demonstration of Serena efficiently retrieving and editing code within Claude Code, thereby saving tokens and time. Efficient operations are not only useful for saving costs, but also for generally improving the generated code's quality. This effect may be less pronounced in very small projects, but often becomes of crucial importance in larger ones.
-
-https://github.com/user-attachments/assets/ab78ebe0-f77d-43cc-879a-cc399efefd87
-
-#### Demonstration 2: Serena in Claude Desktop
-
-A demonstration of Serena implementing a small feature for itself (a better log GUI) with Claude Desktop.
-Note how Serena's tools enable Claude to find and edit the right symbols.
-
-https://github.com/user-attachments/assets/6eaa9aa1-610d-4723-a2d6-bf1e487ba753
-
-### Programming Language Support & Semantic Analysis Capabilities
-
-Serena's semantic code analysis capabilities build on **language servers** using the widely implemented
-language server protocol (LSP). The LSP provides a set of versatile code querying
-and editing functionalities based on symbolic understanding of the code.
-Equipped with these capabilities, Serena discovers and edits code just like a seasoned developer
-making use of an IDE's capabilities would.
-Serena can efficiently find the right context and do the right thing even in very large and
-complex projects! So not only is it free and open-source, it frequently achieves better results
-than existing solutions that charge a premium.
-
-Language servers provide support for a wide range of programming languages.
-With Serena's LSP library, we provide **support for over 30 programming languages**, including
-AL, Bash, C#, C/C++, Clojure, Dart, Elixir, Elm, Erlang, Fortran, Go, Haskell, Java, Javascript, Julia, Kotlin, Lua, Markdown, Nix, Perl, PHP, Python, R, Ruby, Rust, Scala, Swift, TypeScript, YAML and Zig.
-
-> [!IMPORTANT]
-> Some languages require additional dependencies to be installed; see the [Language Support](https://oraios.github.io/serena/01-about/020_programming-languages.html) page for details.
-
-## Quick Start
-
-**Prerequisites**. Serena is managed by *uv*. If you don’t already have it, you need to [install uv](https://docs.astral.sh/uv/getting-started/installation/) before proceeding.
-
-**Starting the MCP Server**. The easiest way to start the Serena MCP server is by running the latest version from GitHub using uvx.
-Issue this command to see available options:
-
-```bash
-uvx --from git+https://github.com/oraios/serena serena start-mcp-server --help
+```
+┌─────────────────────────────────────────────┐
+│  EvolvAI (策略层)                            │
+│  • 约束系统 - 控制操作边界                    │
+│  • TPST分析 - 识别 token 浪费                │
+│  • 区域检测 - 智能搜索范围                    │
+│  • Propose/Apply - 安全两阶段编辑             │
+├─────────────────────────────────────────────┤
+│  Serena (执行层)                             │
+│  • LSP 符号分析 - 精准代码理解                │
+│  • 缓存优化 - 减少重复计算                    │
+│  • 多语言支持 - 30+ 编程语言                  │
+└─────────────────────────────────────────────┘
 ```
 
-**Configuring Your Client**. To connect Serena to your preferred MCP client, you typically need to [configure a launch command in your client](https://oraios.github.io/serena/02-usage/030_clients.html).
-Follow the link for specific instructions on how to set up Serena for Claude Code, Codex, Claude Desktop, MCP-enabled IDEs and other clients (such as local and web-based GUIs). 
+**关键区别**：
+- Serena 优化**执行效率**（每次调用更快）
+- EvolvAI 优化**使用策略**（调用更少、更精准）
 
-> [!TIP]
-> While getting started quickly is easy, Serena is a powerful toolkit with many configuration options.
-> We highly recommend reading through the [user guide](https://oraios.github.io/serena/02-usage/000_intro.html) to get the most out of Serena.
-> 
-> Specifically, we recommend to read about ...
->   * [Serena's project-based workflow](https://oraios.github.io/serena/02-usage/040_workflow.html) and
->   * [configuring Serena](https://oraios.github.io/serena/02-usage/050_configuration.html).
+---
 
-## User Guide
+## 核心功能
 
-Please refer to the [user guide](https://oraios.github.io/serena/02-usage/000_intro.html) for detailed instructions on how to use Serena effectively.
+### 1. ExecutionPlan 约束系统
 
-## Community Feedback
+防止 AI 失控修改，提供可预测的操作边界：
 
-Most users report that Serena has strong positive effects on the results of their coding agents, even when used within
-very capable agents like Claude Code. Serena is often described to be a [game changer](https://www.reddit.com/r/ClaudeAI/comments/1lfsdll/try_out_serena_mcp_thank_me_later/), providing an enormous [productivity boost](https://www.reddit.com/r/ClaudeCode/comments/1mguoia/absolutely_insane_improvement_of_claude_code).
+```python
+from evolvai.core.execution_plan import ExecutionPlan, ExecutionLimits
 
-Serena excels at navigating and manipulating complex codebases, providing tools that support precise code retrieval and editing in the presence of large, strongly structured codebases.
-However, when dealing with tasks that involve only very few/small files, you may not benefit from including Serena on top of your existing coding agent.
-In particular, when writing code from scratch, Serena will not provide much value initially, as the more complex structures that Serena handles more gracefully than simplistic, file-based approaches are yet to be created.
+plan = ExecutionPlan(
+    limits=ExecutionLimits(
+        max_files=10,      # 最多修改10个文件
+        max_changes=50,    # 最多50处变更
+        timeout_seconds=60 # 60秒超时
+    ),
+    rollback=RollbackStrategy(strategy=RollbackStrategyType.GIT_REVERT)
+)
 
-Several videos and blog posts have talked about Serena:
+# AI 使用受约束的工具
+result = batch_edit(
+    pattern=r"oldFunc",
+    replacement="newFunc",
+    execution_plan=plan
+)
+```
 
-* YouTube:
-    * [AI Labs](https://www.youtube.com/watch?v=wYWyJNs1HVk&t=1s)
-    * [Yo Van Eyck](https://www.youtube.com/watch?v=UqfxuQKuMo8&t=45s)
-    * [JeredBlu](https://www.youtube.com/watch?v=fzPnM3ySmjE&t=32s)
+### 2. TPST 分析 (Tokens Per Successful Task)
 
-* Blog posts:
-    * [Serena's Design Principles](https://medium.com/@souradip1000/deconstructing-serenas-mcp-powered-semantic-code-understanding-architecture-75802515d116)
-    * [Serena with Claude Code (in Japanese)](https://blog.lai.so/serena/)
-    * [Turning Claude Code into a Development Powerhouse](https://robertmarshall.dev/blog/turning-claude-code-into-a-development-powerhouse/)
+识别 token 浪费，优化工具使用效率：
 
-## Acknowledgements
+```python
+# 获取工具使用统计
+stats = engine.analyze_tpst()
 
-### Sponsors
+# 识别 token 浪费的工具
+slow_tools = engine.get_slow_tools(threshold_ms=1000)
+token_wasters = engine.get_token_wasters(threshold=5000)
+```
 
-We are very grateful to our [sponsors](https://github.com/sponsors/oraios) who help us drive Serena's development. The core team
-(the founders of [Oraios AI](https://oraios-ai.de/)) put in a lot of work in order to turn Serena into a useful open source project. 
-So far, there is no business model behind this project, and sponsors are our only source of income from it.
+### 3. 区域检测 (Area Detection)
 
-Sponsors help us dedicating more time to the project, managing contributions, and working on larger features (like better tooling based on more advanced
-LSP features, VSCode integration, debugging via the DAP, and several others).
-If you find this project useful to your work, or would like to accelerate the development of Serena, consider becoming a sponsor.
+智能限定搜索范围，减少无效扫描：
 
-We are proud to announce that the Visual Studio Code team, together with Microsoft’s Open Source Programs Office and GitHub Open Source
-have decided to sponsor Serena with a one-time contribution!
+```python
+# 自动检测项目区域
+areas = detector.detect_areas()
+# → [ProjectArea(name="backend-python", ...),
+#    ProjectArea(name="frontend-react", ...)]
 
-<p align="center">
-  <img src="resources/vscode_sponsor_logo.png" alt="Visual Studio Code sponsor logo" width="220">
-</p>
+# 智能搜索（只在相关区域）
+result = safe_search(
+    query="database connection",
+    area_selector="auto"  # 自动选择 backend 区域
+)
+```
 
-### Community Contributions
+### 4. Propose/Apply 安全编辑
 
-A significant part of Serena, especially support for various languages, was contributed by the open source community.
-We are very grateful for the many contributors who made this possible and who played an important role in making Serena
-what it is today.
+两阶段编辑，预览后再应用：
 
-### Technologies
-We built Serena on top of multiple existing open-source technologies, the most important ones being:
+```python
+# Phase 1: 提议变更（生成 diff）
+proposal = propose_edit(
+    pattern=r"TODO",
+    replacement="DONE",
+    scope="**/*.py"
+)
+# → 返回 unified_diff 和 patch_id
 
-1. [multilspy](https://github.com/microsoft/multilspy).
-   A library which wraps language server implementations and adapts them for interaction via Python.
-   It provided the basis for our library Solid-LSP (`src/solidlsp`).
-   Solid-LSP provides pure synchronous LSP calls and extends the original library with the symbolic logic
-   that Serena required.
-2. [Python MCP SDK](https://github.com/modelcontextprotocol/python-sdk)
-3. All the language servers that we use through Solid-LSP.
+# Phase 2: 确认后应用
+result = apply_edit(patch_id=proposal.patch_id)
+```
 
-Without these projects, Serena would not have been possible (or would have been significantly more difficult to build).
+---
 
-## Customizing and Extending Serena
+## 快速开始
 
-It is straightforward to extend Serena's AI functionality with your own ideas.
-Simply implement a new tool by subclassing
-`serena.agent.Tool` and implement the `apply` method with a signature
-that matches the tool's requirements.
-Once implemented, `SerenaAgent` will automatically have access to the new tool.
+### 安装
 
-It is also relatively straightforward to add [support for a new programming language](/.serena/memories/adding_new_language_support_guide.md).
+```bash
+# 使用 uv（推荐）
+uv pip install evolvai
 
-We look forward to seeing what the community will come up with!
-For details on contributing, see [contributing guidelines](/CONTRIBUTING.md).
+# 或使用 pip
+pip install evolvai
+```
+
+### MCP 服务器配置
+
+在 Claude Desktop 或其他 MCP 客户端中配置：
+
+```json
+{
+  "mcpServers": {
+    "evolvai": {
+      "command": "uv",
+      "args": ["run", "evolvai", "mcp"],
+      "cwd": "/path/to/your/project"
+    }
+  }
+}
+```
+
+### 基础使用
+
+```bash
+# 启动 MCP 服务器
+evolvai mcp
+
+# 或带 Dashboard
+evolvai mcp --dashboard
+```
+
+---
+
+## 工具列表
+
+### 高级策略工具（EvolvAI 独有）
+
+| 工具 | 功能 | 差异化价值 |
+|------|------|-----------|
+| `batch_edit` | 多文件批量编辑 | ExecutionPlan 约束 + 自动回滚 |
+| `safe_search` | 智能搜索 | 区域检测 + 预算分配 |
+| `propose_edit` | 提议编辑 | 预览 diff，不直接修改 |
+| `apply_edit` | 应用编辑 | 约束验证 + 回滚支持 |
+| `safe_exec` | 安全执行 | 命令白名单 + 超时保护 |
+
+### 基础符号工具（继承自 Serena）
+
+| 工具 | 功能 |
+|------|------|
+| `find_symbol` | LSP 符号查找 |
+| `get_symbols_overview` | 文件符号概览 |
+| `find_referencing_symbols` | 引用查找 |
+| `replace_symbol_body` | 符号替换 |
+| 更多... | 参见 [Serena 文档](https://github.com/oraios/serena) |
+
+---
+
+## 架构
+
+```
+evolvai/
+├── core/                    # 核心引擎
+│   ├── execution.py         # ToolExecutionEngine (4阶段执行)
+│   ├── execution_plan.py    # ExecutionPlan 约束定义
+│   └── constraint_exceptions.py  # 约束异常
+├── area_detection/          # 区域检测
+│   ├── detector.py          # AreaDetector
+│   ├── query_router.py      # QueryRouter
+│   └── feedback_system.py   # FeedbackSystem
+├── tools/                   # 高级工具
+│   ├── batch_edit_tool.py   # BatchEditTool
+│   ├── safe_exec_tool.py    # SafeExecTool
+│   └── patch_editor.py      # PatchEditor
+└── ...
+```
+
+---
+
+## 与 Serena 的关系
+
+EvolvAI 是 Serena 的**策略层扩展**，而非替代品：
+
+| 方面 | Serena | EvolvAI |
+|------|--------|---------|
+| 定位 | 执行层 | 策略层 |
+| 优化目标 | 每次调用更快 | 调用更少更精准 |
+| 核心能力 | LSP、符号分析、缓存 | 约束、TPST、区域检测 |
+| 关系 | 基础设施 | 上层策略 |
+
+我们定期同步上游 Serena 的改进，同时保持策略层的差异化。
+
+---
+
+## 开发
+
+### 环境设置
+
+```bash
+# 克隆仓库
+git clone https://github.com/dreamlx/evolvai.git
+cd evolvai
+
+# 安装依赖
+uv sync
+
+# 运行测试
+uv run poe test
+
+# 代码格式化
+uv run poe format
+
+# 类型检查
+uv run poe type-check
+```
+
+### 项目结构
+
+- `src/evolvai/` - EvolvAI 核心代码
+- `src/serena/` - Serena 基础代码（同步自上游）
+- `src/solidlsp/` - LSP 协议实现
+- `test/evolvai/` - EvolvAI 测试
+- `docs/` - 文档
+
+---
+
+## 贡献
+
+欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
+
+### 贡献方向
+
+- 约束系统增强（更多预设配置）
+- TPST Dashboard 可视化
+- 区域检测优化（更多语言支持）
+- 文档和示例
+
+---
+
+## 许可证
+
+MIT License - 详见 [LICENSE](LICENSE) 文件
+
+---
+
+## 致谢
+
+- [Serena](https://github.com/oraios/serena) - 提供强大的 LSP 基础能力
+- [Oraios AI](https://oraios-ai.de/) - Serena 的创建者
+
+---
+
+<div align="center">
+  <p>让 AI 更聪明地使用工具</p>
+</div>
