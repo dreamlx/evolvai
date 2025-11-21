@@ -46,9 +46,8 @@ class Component(ABC):
     def create_language_server_symbol_retriever(self) -> LanguageServerSymbolRetriever:
         if not self.agent.is_using_language_server():
             raise Exception("Cannot create LanguageServerSymbolRetriever; agent is not in language server mode.")
-        language_server = self.agent.language_server
-        assert language_server is not None
-        return LanguageServerSymbolRetriever(language_server, agent=self.agent)
+        language_server_manager = self.agent.get_language_server_manager_or_raise()
+        return LanguageServerSymbolRetriever(language_server_manager, agent=self.agent)
 
     @property
     def project(self) -> Project:
@@ -240,10 +239,24 @@ class Tool(Component):
             if log_call:
                 log.info(f"Result: {result}")
 
+            # Save LSP caches after tool execution (from upstream)
+            try:
+                ls_manager = self.agent.get_language_server_manager()
+                if ls_manager is not None:
+                    ls_manager.save_all_caches()
+            except Exception as e:
+                log.error(f"Error saving language server cache: {e}")
+
             return result
 
-        future = self.agent.issue_task(task, name=self.__class__.__name__)
-        return future.result(timeout=self.agent.serena_config.tool_timeout)
+        # execute the tool in the agent's task executor, with timeout
+        try:
+            task_exec = self.agent.issue_task(task, name=self.__class__.__name__)
+            return task_exec.result(timeout=self.agent.serena_config.tool_timeout)
+        except Exception as e:  # typically TimeoutError (other exceptions caught in task)
+            msg = f"Error: {e.__class__.__name__} - {e}"
+            log.error(msg)
+            return msg
 
 
 class EditedFileContext:
