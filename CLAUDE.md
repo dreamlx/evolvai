@@ -16,7 +16,7 @@ This file provides guidance to Claude Code when working in this repository.
 ### Claude无法真正自我觉察，需要用户监督
 
 **用户触发词（有效机制）**:
-- "专家模式" → 强制重读 CLAUDE-PERSONA.md
+- "专家模式, amos, shifu" → 强制重读 CLAUDE-PERSONA.md
 - "深入思考" → 激活系统性分析，不立即修复
 - "不对，有问题" → 暂停操作，重新评估
 - "等一下" → 立即停止当前操作，思考操作并提问
@@ -70,7 +70,7 @@ This file provides guidance to Claude Code when working in this repository.
 ```
 "我已加载项目上下文，将严格遵守 .rules:
 1. TDD Workflow - 代码前检查 Story TDD Plan
-2. Tool Priority - EvolvAI → Serena → Native (dogfooding)
+2. Tool Priority - EvolvAI → Native (dogfooding)
 3. Context Updates - 里程碑手动更新，非每次提交
 4. Git Workflow - feature → develop → main
 
@@ -126,6 +126,55 @@ feature/* → develop → main
 
 **完整规则**: 见 `.rules` (在 context 文件中)
 
+### 5. EvolvAI 智能循环（防呆模式 - 强制执行）
+
+**核心原则**：一次做对 > 效率优化（返工成本 >> 循环成本）
+
+**每个任务必须完整执行 5 步，不允许跳过**：
+
+```
+1. safe_search + Area Detection
+   └─ 理解上下文和影响范围（不是"找到文件"）
+   └─ 即使是 MD 文件也要搜索引用！
+
+2. think_about_collected_information
+   └─ 信息足够吗？缺什么？
+
+3. propose_edit + ExecutionPlan
+   └─ 预览编辑 + 硬约束检查
+
+4. apply_edit
+   └─ 执行编辑
+
+5. think_about_whether_you_are_done
+   └─ 真正完成了吗？测试跑了吗？
+```
+
+**⚠️ Step 1 不能跳过的原因**：
+- 即使"简单的 MD 文件"也可能被 50+ 处引用
+- 程序文件需要找调用者、测试、文档
+- "感觉简单"是陷阱，已通过 dogfooding 验证
+
+**Dogfooding 报告格式**：
+
+```
+## 循环检查点报告
+**任务**: [任务描述]
+
+[Step 1] safe_search: 范围 X，找到 N 个结果
+[Step 2] think: 信息足够/不足，缺 X
+[Step 3] propose_edit: N 文件，~M 行
+[Step 4] apply_edit: 执行
+[Step 5] think: 完成/未完成，原因 X
+
+📊 指标：Token ~N, 返工 N 次, ✅/❌
+```
+
+**设计原则**：
+- 软约束（think）+ 硬约束（Area/Plan）= 协同
+- 正确性 > 效率（在确保正确的前提下优化 tokens）
+- 基于数据验证，不盲目调整
+
 ---
 
 ## 💻 紧急命令参考
@@ -179,6 +228,7 @@ uv run poe test -m "python or go"  # 多语言
 2. ✅ 声明 `.rules` 遵守
 3. ✅ 代码前检查 Story TDD Plan
 4. ✅ EvolvAI 工具优先（dogfooding）
+5. ✅ 遵循 5 步智能循环（报告指标）
 
 **为什么 CLAUDE.md 这么短？**
 
