@@ -46,22 +46,27 @@ class RestartLanguageServerTool(Tool, ToolMarkerOptional):
         return SUCCESS_RESULT
 
 
-class GetSymbolsOverviewTool(Tool, ToolMarkerSymbolicRead, ToolMarkerOptional):
+class GetSymbolsOverviewTool(Tool, ToolMarkerSymbolicRead):
     """
     Gets an overview of the top-level symbols defined in a given file.
+
+    When to use:
+    - Understand file structure before making changes
+    - Find available classes, functions, methods in a file
+    - Navigate unfamiliar code quickly
+
+    When NOT to use (use Grep instead):
+    - Search for text in comments or strings
+    - Search across multiple files at once
     """
 
     def apply(self, relative_path: str, max_answer_chars: int = -1) -> str:
         """
-        Use this tool to get a high-level understanding of the code symbols in a file.
-        This should be the first tool to call when you want to understand a new file, unless you already know
-        what you are looking for.
+        Get high-level understanding of code symbols in a file.
 
-        :param relative_path: the relative path to the file to get the overview of
-        :param max_answer_chars: if the overview is longer than this number of characters,
-            no content will be returned. -1 means the default value from the config will be used.
-            Don't adjust unless there is really no other way to get the content required for the task.
-        :return: a JSON object containing info about top-level symbols in the file
+        :param relative_path: the relative path to the file
+        :param max_answer_chars: max characters for result (-1 for default)
+        :return: JSON with top-level symbols (classes, functions, etc.)
         """
         symbol_retriever = self.create_language_server_symbol_retriever()
         file_path = os.path.join(self.project.project_root, relative_path)
@@ -77,9 +82,20 @@ class GetSymbolsOverviewTool(Tool, ToolMarkerSymbolicRead, ToolMarkerOptional):
         return self._limit_length(result_json_str, max_answer_chars)
 
 
-class FindSymbolTool(Tool, ToolMarkerSymbolicRead, ToolMarkerOptional):
+class FindSymbolTool(Tool, ToolMarkerSymbolicRead):
     """
-    Performs a global (or local) search for symbols with/containing a given name/substring (optionally filtered by type).
+    Find symbol definition by name path with LSP semantic understanding.
+
+    When to use:
+    - Locate function/class/method definition precisely
+    - Get symbol signature, parameters, return type
+    - Navigate code structure semantically
+    - Prepare for refactoring (find before rename)
+
+    When NOT to use (use Grep instead):
+    - Search in comments, strings, non-code files
+    - Fuzzy text search without knowing symbol name
+    - Search configuration or documentation files
     """
 
     # noinspection PyDefaultArgument
@@ -161,9 +177,19 @@ class FindSymbolTool(Tool, ToolMarkerSymbolicRead, ToolMarkerOptional):
         return self._limit_length(result, max_answer_chars)
 
 
-class FindReferencingSymbolsTool(Tool, ToolMarkerSymbolicRead, ToolMarkerOptional):
+class FindReferencingSymbolsTool(Tool, ToolMarkerSymbolicRead):
     """
-    Finds symbols that reference the symbol at the given location (optionally filtered by type).
+    Find all symbols that reference a given symbol (callers, usages).
+
+    When to use:
+    - Find all callers of a function/method
+    - Understand impact before refactoring
+    - Trace data flow through codebase
+    - Prepare for safe rename (see all usages first)
+
+    When NOT to use:
+    - Search for text patterns (use Grep)
+    - Find symbol definition (use find_symbol)
     """
 
     # noinspection PyDefaultArgument
@@ -297,9 +323,20 @@ class InsertBeforeSymbolTool(Tool, ToolMarkerSymbolicEdit, ToolMarkerOptional):
         return SUCCESS_RESULT
 
 
-class RenameSymbolTool(Tool, ToolMarkerSymbolicEdit, ToolMarkerOptional):
+class RenameSymbolTool(Tool, ToolMarkerSymbolicEdit):
     """
-    Renames a symbol throughout the codebase using language server refactoring capabilities.
+    Rename a symbol throughout the codebase with LSP semantic understanding.
+
+    When to use:
+    - Rename variable/function/class/method safely
+    - Ensure all references are updated correctly
+    - Avoid mistakes from text-based batch_edit
+    - Refactoring with scope awareness
+
+    When NOT to use (use batch_edit instead):
+    - Replace text patterns (not symbol names)
+    - Modify strings, comments, documentation
+    - Complex regex transformations
     """
 
     def apply(
@@ -309,14 +346,12 @@ class RenameSymbolTool(Tool, ToolMarkerSymbolicEdit, ToolMarkerOptional):
         new_name: str,
     ) -> str:
         """
-        Renames the symbol with the given `name_path` to `new_name` throughout the entire codebase.
-        Note: for languages with method overloading, like Java, name_path may have to include a method's
-        signature to uniquely identify a method.
+        Rename symbol throughout entire codebase using LSP refactoring.
 
-        :param name_path: name path of the symbol to rename (definitions in the `find_symbol` tool apply)
-        :param relative_path: the relative path to the file containing the symbol to rename
+        :param name_path: name path of the symbol to rename
+        :param relative_path: file containing the symbol
         :param new_name: the new name for the symbol
-        :return: result summary indicating success or failure
+        :return: result summary
         """
         code_editor = self.create_code_editor()
         status_message = code_editor.rename_symbol(name_path, relative_file_path=relative_path, new_name=new_name)
