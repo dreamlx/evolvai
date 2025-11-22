@@ -90,12 +90,24 @@ This file provides guidance to Claude Code when working in this repository.
 ### 1. 工具优先级（强制 Dogfooding）
 
 ```
-🥇 EvolvAI MCP (首选)
-   └─ batch_edit, safe_exec, safe_search
+🥇 EvolvAI + Serena MCP (首选)
+   ├─ 搜索: safe_search, find_symbol, get_symbols_overview
+   ├─ 编辑: replace_symbol_body, batch_edit, propose_edit
+   └─ 执行: safe_exec
 
 🥉 Native Tools (最后手段，需记录原因)
    └─ Read, Write, Edit, Grep, Glob
 ```
+
+**快速选择**:
+- 不知道位置 → `safe_search`
+- 知道符号名 → `find_symbol`
+- 文件结构 → `get_symbols_overview`
+- 改函数体 → `replace_symbol_body`
+- 批量替换 → `batch_edit`
+- 复杂重构 → `propose_edit` → `apply_edit`
+
+**复杂任务**: `read_memory("tool-usage-guide")`
 
 **目的**: 收集 TPST 指标，验证工具效率
 
@@ -126,54 +138,23 @@ feature/* → develop → main
 
 **完整规则**: 见 `.rules` (在 context 文件中)
 
-### 5. EvolvAI 智能循环（防呆模式 - 强制执行）
+### 5. Serena 反思工具（软约束）
 
 **核心原则**：一次做对 > 效率优化（返工成本 >> 循环成本）
 
-**每个任务必须完整执行 5 步，不允许跳过**：
+**使用 Serena 的反思工具进行质量控制**：
 
 ```
-1. safe_search + Area Detection
-   └─ 理解上下文和影响范围（不是"找到文件"）
-   └─ 即使是 MD 文件也要搜索引用！
+搜索后反思：
+- 完成搜索步骤后 → think_about_collected_information
+- 评估信息是否充分、相关
 
-2. think_about_collected_information
-   └─ 信息足够吗？缺什么？
-
-3. propose_edit + ExecutionPlan
-   └─ 预览编辑 + 硬约束检查
-
-4. apply_edit
-   └─ 执行编辑
-
-5. think_about_whether_you_are_done
-   └─ 真正完成了吗？测试跑了吗？
+完成前确认：
+- 感觉任务完成时 → think_about_whether_you_are_done
+- 确认所有要求都已满足
 ```
 
-**⚠️ Step 1 不能跳过的原因**：
-- 即使"简单的 MD 文件"也可能被 50+ 处引用
-- 程序文件需要找调用者、测试、文档
-- "感觉简单"是陷阱，已通过 dogfooding 验证
-
-**Dogfooding 报告格式**：
-
-```
-## 循环检查点报告
-**任务**: [任务描述]
-
-[Step 1] safe_search: 范围 X，找到 N 个结果
-[Step 2] think: 信息足够/不足，缺 X
-[Step 3] propose_edit: N 文件，~M 行
-[Step 4] apply_edit: 执行
-[Step 5] think: 完成/未完成，原因 X
-
-📊 指标：Token ~N, 返工 N 次, ✅/❌
-```
-
-**设计原则**：
-- 软约束（think）+ 硬约束（Area/Plan）= 协同
-- 正确性 > 效率（在确保正确的前提下优化 tokens）
-- 基于数据验证，不盲目调整
+**工具选择逻辑**：已内嵌到各工具的 docstring 中，通过 MCP 自动获取。
 
 ---
 
@@ -228,7 +209,7 @@ uv run poe test -m "python or go"  # 多语言
 2. ✅ 声明 `.rules` 遵守
 3. ✅ 代码前检查 Story TDD Plan
 4. ✅ EvolvAI 工具优先（dogfooding）
-5. ✅ 遵循 5 步智能循环（报告指标）
+5. ✅ 使用反思工具（think_about_*）进行质量控制
 
 **为什么 CLAUDE.md 这么短？**
 

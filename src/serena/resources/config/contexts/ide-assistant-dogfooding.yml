@@ -1,27 +1,40 @@
 description: IDE assistant context WITH EvolvAI tools for dogfooding
 prompt: |
-  You are running in IDE assistant context with EvolvAI constraint tools enabled.
+  ## EvolvAI Dogfooding Context
 
-  This is a DOGFOODING mode where you can use both Serena's symbolic tools
-  AND EvolvAI's constraint tools on the EvolvAI codebase itself.
+  You have access to two tool families:
+  - **EvolvAI Tools**: Constraint-based operations with safety limits
+  - **Serena Tools**: Symbol-level code understanding and editing
 
-  **EvolvAI Constraint Tools (Level 1-2 Operations):**
-  - batch_edit: Regex-based batch file editing with ExecutionPlan validation
-  - safe_search: Intelligent code search with result limiting
-  - safe_exec: Safe command execution with timeout and output management
+  ### Quick Tool Selection Rules
 
-  **Serena Symbolic Tools (Level 2-3 Operations):**
-  - find_symbol, get_symbols_overview: Code navigation
-  - replace_symbol_body, insert_after_symbol: Symbol-level editing
-  - search_for_pattern: Pattern-based search
+  **Search & Explore:**
+  - Don't know location → `safe_search`
+  - Know file, need structure → `get_symbols_overview`
+  - Know symbol name → `find_symbol`
 
-  **When to use what:**
-  - Simple text pattern replacement → batch_edit
-  - Understanding code structure → Serena symbolic tools
-  - Running tests/commands safely → safe_exec
-  - Searching with constraints → safe_search
+  **Edit:**
+  - Rename across codebase → `rename_symbol` (LSP)
+  - Rewrite function/method → `replace_symbol_body`
+  - Regex pattern replace → `batch_edit`
+  - Complex multi-file → `propose_edit` → `apply_edit`
 
-  **Dogfooding Goal:**
+  **Validate:**
+  - Run tests/commands → `safe_exec`
+
+  ### Tool Priority (Dogfooding)
+
+  1. EvolvAI/Serena tools (track TPST)
+  2. Native tools (only when necessary, document why)
+
+  ### Reflection Tools (Soft Constraints)
+
+  Use Serena's thinking tools for quality control:
+  - After search steps → `think_about_collected_information`
+  - Before completing task → `think_about_whether_you_are_done`
+
+  ### Dogfooding Goal
+
   Use EvolvAI tools to improve EvolvAI itself, tracking TPST and tool efficiency.
 
 excluded_tools:
@@ -31,7 +44,79 @@ excluded_tools:
   - prepare_for_new_conversation
   - replace_content
 
-tool_description_overrides: {}
+tool_description_overrides:
+  safe_search: |
+    Execute intelligent search with auto area detection and constraints.
+
+    **When to use:**
+    - Don't know file location, need to explore codebase
+    - Multi-area projects (go + python + typescript)
+    - Need budget protection from search explosion
+
+    **When NOT to use:**
+    - Know exact pattern → use Grep or search_for_pattern
+    - Know symbol name → use find_symbol
+    - Single file search → use Read
+
+    **Related:** get_symbols_overview (after finding file), find_symbol (if know name)
+
+  propose_edit: |
+    Generate edit proposal (unified diff) without modifying files.
+    Implements Patch-First architecture: preview before apply.
+
+    **When to use:**
+    - Complex multi-file refactoring
+    - Need to preview changes before applying
+    - Want constraint validation (max_files, max_changes)
+
+    **When NOT to use:**
+    - Simple single-file edit → use replace_symbol_body
+    - Direct regex replace → use batch_edit
+
+    **Workflow:** propose_edit → review diff → apply_edit
+
+  apply_edit: |
+    Apply a previously proposed patch with behavioral constraints.
+
+    **When to use:**
+    - After propose_edit, to apply validated changes
+    - Need ExecutionPlan constraints (max_files, max_changes, timeout)
+
+    **Prerequisites:**
+    - Must have patch_id from propose_edit
+    - Review the unified_diff before applying
+
+    **Safety:** Supports rollback on failure
+
+  batch_edit: |
+    Batch regex pattern replacement across files with preview and rollback.
+
+    **When to use:**
+    - Simple text pattern replacement across files
+    - Renaming variables/functions (getUserData → fetchUserData)
+    - Updating version strings, URLs, config values
+
+    **When NOT to use:**
+    - Need code structure understanding → use isort/black/ruff
+    - Semantic refactoring → use LSP tools (rename_symbol)
+    - Complex multi-step changes → use propose_edit
+
+    **Always use preview=True first!**
+
+  safe_exec: |
+    Execute shell command with safety checks and timeout.
+
+    **When to use:**
+    - Run tests: uv run poe test
+    - Build/compile commands
+    - Git operations
+
+    **Safety features:**
+    - Confirmation required for risky commands (rm, etc.)
+    - Timeout protection
+    - Output truncation for large outputs
+
+    **Note:** Absurd commands (rm -rf /) are blocked regardless of confirmation
 
 # whether to assume that Serena shall only work on a single project in this context (provided that a project is given
 # when Serena is started).
