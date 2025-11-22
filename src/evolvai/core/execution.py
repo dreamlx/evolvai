@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING, Any
 
 from sensai.util import logging
 
+from evolvai.adapters.serena_adapter import SerenaAgentAdapter
 from evolvai.core.constraint_exceptions import (
     ChangeLimitExceededError,
     FileLimitExceededError,
     TimeoutError,
 )
 from evolvai.core.exceptions import ConstraintViolationError
+from evolvai.core.interfaces.agent_protocol import AgentProtocol
 from evolvai.core.plan_validator import PlanValidator
 
 if TYPE_CHECKING:
@@ -130,13 +132,20 @@ class ToolExecutionEngine:
     4. TPST analysis support
     """
 
-    def __init__(self, agent: "SerenaAgent", enable_constraints: bool = False):
+    def __init__(self, agent: "SerenaAgent | AgentProtocol", enable_constraints: bool = False):
         """Initialize execution engine.
 
-        :param agent: SerenaAgent instance
+        :param agent: SerenaAgent instance or AgentProtocol-compatible adapter
         :param enable_constraints: Enable Epic-001 constraints
         """
-        self._agent = agent
+        # Wrap SerenaAgent with adapter if not already wrapped
+        if hasattr(agent, "get_language_server_manager"):
+            # It's a raw SerenaAgent, wrap it
+            self._adapter: AgentProtocol = SerenaAgentAdapter(agent)  # type: ignore
+        else:
+            # Already an adapter or protocol-compatible object
+            self._adapter = agent  # type: ignore
+
         self._constraints_enabled = enable_constraints
         self._audit_log: list[dict[str, Any]] = []
 
@@ -211,24 +220,24 @@ class ToolExecutionEngine:
         # Check 1: Tool activation
         try:
             if not tool.is_active():
-                active_tools = self._agent.get_active_tool_names()
+                active_tools = self._adapter.get_active_tool_names()
                 raise RuntimeError(f"Error: Tool '{tool.get_name()}' is not active. Active tools: {active_tools}")
         except Exception as e:
             raise RuntimeError(f"RuntimeError while checking if tool {tool.get_name()} is active: {e}")
 
         # Check 2: Active project requirement
         if not isinstance(tool, ToolMarkerDoesNotRequireActiveProject):
-            if self._agent._active_project is None:
-                project_names = self._agent.serena_config.project_names
+            if not self._adapter.has_active_project():
+                project_names = self._adapter.get_project_names()
                 raise RuntimeError(
                     "Error: No active project. Ask the user to provide the project path "
                     f"or to select a project from this list of known projects: {project_names}"
                 )
 
             # Check 3: Language server status
-            if self._agent.is_using_language_server() and not self._agent.is_language_server_running():
+            if self._adapter.is_using_language_server() and not self._adapter.is_language_server_running():
                 log.info("Language server is not running. Starting it ...")
-                self._agent.reset_language_server()
+                self._adapter.reset_language_server()
 
     def _pre_execution_with_constraints(self, tool: "Tool", ctx: ExecutionContext) -> None:
         """Phase 2: Pre-execution with constraints (Epic-001).
@@ -284,7 +293,7 @@ class ToolExecutionEngine:
             # Handle LSP termination with retry
             if e.is_language_server_terminated():
                 log.error(f"Language server terminated while executing tool ({e}). Restarting the language server and retrying ...")
-                self._agent.reset_language_server()
+                self._adapter.reset_language_server()
                 # Retry execution
                 result = apply_fn(**ctx.kwargs)
             else:
@@ -304,17 +313,11 @@ class ToolExecutionEngine:
         - Save LSP cache if available
         """
         # Record tool usage for statistics
-        if hasattr(self._agent, "record_tool_usage_if_enabled") and ctx.result is not None:
-            self._agent.record_tool_usage_if_enabled(ctx.kwargs, ctx.result, tool)
+        if ctx.result is not None:
+            self._adapter.record_tool_usage(ctx.kwargs, ctx.result, tool)
 
         # Save language server cache
-        # Use LanguageServerManager to save all caches (Serena's multi-LSP architecture)
-        lsm = self._agent.get_language_server_manager()
-        if lsm is not None:
-            try:
-                lsm.save_all_caches()
-            except Exception as e:
-                log.error(f"Error saving language server cache: {e}")
+        self._adapter.save_lsp_caches()
 
     # Audit Log Interface (Cycle 6)
 

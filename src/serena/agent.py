@@ -321,31 +321,6 @@ class SerenaAgent:
             )
         return language_server_manager
 
-    def is_language_server_running(self) -> bool:
-        """
-        Check if the language server is currently running.
-
-        :return: True if language server manager exists and has at least one running server,
-                 False otherwise
-        """
-        lsm = self.get_language_server_manager()
-        if lsm is None:
-            return False
-        # Check if any language server is running
-        for ls in lsm.iter_language_servers():
-            if ls.is_running():
-                return True
-        return False
-
-    def reset_language_server(self) -> None:
-        """
-        Reset/restart the language server manager.
-
-        This is an alias for reset_language_server_manager() to match the interface
-        expected by EvolvAI's execution.py.
-        """
-        self.reset_language_server_manager()
-
     def get_context(self) -> SerenaAgentContext:
         return self._context
 

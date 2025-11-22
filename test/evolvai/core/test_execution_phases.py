@@ -37,9 +37,11 @@ class TestPreValidationPhase:
         agent._active_project = Mock()
         agent._active_project.project_root = "/test/project"
         agent.is_using_language_server = Mock(return_value=False)
-        agent.is_language_server_running = Mock(return_value=False)
         agent.tool_is_active = Mock(return_value=True)
         agent.get_active_tool_names = Mock(return_value=["mock_tool"])
+        agent.get_language_server_manager = Mock(return_value=None)
+        agent.reset_language_server_manager = Mock()
+        agent.record_tool_usage_if_enabled = Mock()
         return agent
 
     @pytest.fixture
@@ -99,39 +101,44 @@ class TestPreValidationPhase:
     def test_lsp_check_starts_language_server_if_needed(self, engine, mock_agent):
         """Test that LSP check starts language server if needed."""
         mock_agent.is_using_language_server = Mock(return_value=True)
-        mock_agent.is_language_server_running = Mock(return_value=False)
-        mock_agent.reset_language_server = Mock()
+        # Mock LSM with no running servers
+        mock_lsm = Mock()
+        mock_lsm.iter_language_servers = Mock(return_value=[])
+        mock_agent.get_language_server_manager = Mock(return_value=mock_lsm)
         tool = MockTool(mock_agent)
 
         result = engine.execute(tool, test_arg="test")
 
         # Should start language server
-        mock_agent.reset_language_server.assert_called_once()
+        mock_agent.reset_language_server_manager.assert_called_once()
         assert result == "result: test"
 
     def test_lsp_check_skipped_when_not_using_lsp(self, engine, mock_agent):
         """Test that LSP check is skipped when not using language server."""
         mock_agent.is_using_language_server = Mock(return_value=False)
-        mock_agent.reset_language_server = Mock()
         tool = MockTool(mock_agent)
 
         result = engine.execute(tool, test_arg="test")
 
         # Should not start language server
-        mock_agent.reset_language_server.assert_not_called()
+        mock_agent.reset_language_server_manager.assert_not_called()
         assert result == "result: test"
 
     def test_lsp_check_skipped_when_already_running(self, engine, mock_agent):
         """Test that LSP check is skipped when language server already running."""
         mock_agent.is_using_language_server = Mock(return_value=True)
-        mock_agent.is_language_server_running = Mock(return_value=True)
-        mock_agent.reset_language_server = Mock()
+        # Mock LSM with a running server
+        mock_ls = Mock()
+        mock_ls.is_running = Mock(return_value=True)
+        mock_lsm = Mock()
+        mock_lsm.iter_language_servers = Mock(return_value=[mock_ls])
+        mock_agent.get_language_server_manager = Mock(return_value=mock_lsm)
         tool = MockTool(mock_agent)
 
         result = engine.execute(tool, test_arg="test")
 
         # Should not restart language server
-        mock_agent.reset_language_server.assert_not_called()
+        mock_agent.reset_language_server_manager.assert_not_called()
         assert result == "result: test"
 
     def test_validation_checks_run_in_order(self, engine, mock_agent):
@@ -161,7 +168,9 @@ class TestExecutionPhase:
         agent._active_project = Mock()
         agent.is_using_language_server = Mock(return_value=False)
         agent.tool_is_active = Mock(return_value=True)
-        agent.language_server = None
+        agent.get_language_server_manager = Mock(return_value=None)
+        agent.reset_language_server_manager = Mock()
+        agent.record_tool_usage_if_enabled = Mock()
         return agent
 
     @pytest.fixture
@@ -198,14 +207,13 @@ class TestExecutionPhase:
                     raise SolidLSPException("Language server terminated", cause=cause)
                 return "success_after_retry"
 
-        mock_agent.reset_language_server = Mock()
         tool = LSPFailTool(mock_agent)
 
         result = engine.execute(tool)
 
         assert result == "success_after_retry"
         assert call_count["count"] == 2  # Called twice (failed, then retry)
-        mock_agent.reset_language_server.assert_called_once()
+        mock_agent.reset_language_server_manager.assert_called_once()
 
     def test_execution_does_not_retry_non_terminated_lsp_exception(self, engine, mock_agent):
         """Test that non-terminated LSP exceptions are not retried."""
@@ -216,14 +224,13 @@ class TestExecutionPhase:
                 # Create LSP exception without LanguageServerTerminatedException cause
                 raise SolidLSPException("Some LSP error")
 
-        mock_agent.reset_language_server = Mock()
         tool = LSPFailTool(mock_agent)
 
         result = engine.execute(tool)
 
         # Should fail without retry
         assert "error" in result.lower()
-        mock_agent.reset_language_server.assert_not_called()
+        mock_agent.reset_language_server_manager.assert_not_called()
 
     def test_execution_tracks_duration(self, engine, mock_agent):
         """Test that execution tracks duration."""
