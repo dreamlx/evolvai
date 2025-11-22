@@ -308,9 +308,11 @@ class ToolExecutionEngine:
             self._agent.record_tool_usage_if_enabled(ctx.kwargs, ctx.result, tool)
 
         # Save language server cache
-        if self._agent.language_server is not None:
+        # Use LanguageServerManager to save all caches (Serena's multi-LSP architecture)
+        lsm = self._agent.get_language_server_manager()
+        if lsm is not None:
             try:
-                self._agent.language_server.save_cache()
+                lsm.save_all_caches()
             except Exception as e:
                 log.error(f"Error saving language server cache: {e}")
 

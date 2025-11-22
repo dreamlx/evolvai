@@ -27,7 +27,7 @@ class TestPostExecutionPhase:
         agent._active_project = Mock()
         agent.is_using_language_server = Mock(return_value=False)
         agent.tool_is_active = Mock(return_value=True)
-        agent.language_server = None
+        agent.get_language_server_manager = Mock(return_value=None)
         agent.record_tool_usage_if_enabled = Mock()
         return agent
 
@@ -48,15 +48,17 @@ class TestPostExecutionPhase:
 
     def test_post_execution_saves_lsp_cache(self, engine, mock_agent):
         """Test that post-execution saves LSP cache if available."""
-        mock_agent.language_server = Mock()
-        mock_agent.language_server.save_cache = Mock()
+        # Mock LanguageServerManager with save_all_caches method
+        mock_lsm = Mock()
+        mock_lsm.save_all_caches = Mock()
+        mock_agent.get_language_server_manager = Mock(return_value=mock_lsm)
         tool = MockTool(mock_agent)
 
         result = engine.execute(tool, test_arg="test")
 
         assert result == "result: test"
-        # Should save LSP cache
-        mock_agent.language_server.save_cache.assert_called_once()
+        # Should save LSP cache via LanguageServerManager
+        mock_lsm.save_all_caches.assert_called_once()
 
 
 class TestAuditLogInterface:
