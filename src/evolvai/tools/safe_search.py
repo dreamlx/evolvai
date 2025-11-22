@@ -257,12 +257,15 @@ class SafeSearchWrapper:
         """执行实际的搜索操作"""
         results = []
 
+        # 创建区域名到 ProjectArea 的映射，用于获取每个区域的 file_patterns
+        area_patterns_map = {area.name: area.file_patterns for area in routing.areas}
+
         for applied_area in routing.applied_areas:
             try:
-                # 构建搜索模式
-                patterns = routing.final_patterns
+                # 获取当前区域的文件模式，而不是所有区域的合并模式
+                patterns = area_patterns_map.get(applied_area.name, routing.final_patterns)
 
-                # 执行搜索（这里简化实现，实际应该使用具体的搜索工具）
+                # 执行搜索
                 area_results = self._search_in_area(query, applied_area, patterns, max_results, timeout_seconds, execution_plan)
 
                 results.extend(area_results)
@@ -292,30 +295,71 @@ class SafeSearchWrapper:
     ) -> list[dict[str, Any]]:
         """在特定区域内执行搜索
 
-        简化实现：这里应该集成实际的搜索工具（ripgrep、ugrep、grep等）
+        使用 Serena 的 search_source_files_for_pattern 进行实际搜索。
         """
-        # 简化的搜索实现，实际应该调用具体的搜索工具
-        # 这里返回模拟结果，实际实现需要：
-        # 1. 根据patterns构建搜索命令
-        # 2. 调用ripgrep/ugrep/grep等工具
-        # 3. 解析结果并返回结构化数据
+        results = []
 
-        mock_results = []
-        area_root = area.name.split("-")[0] if "-" in area.name else "root"
+        # 检查是否有 agent 和 project
+        if self.agent is None:
+            return results
 
-        # 模拟搜索结果（实际实现时删除）
-        for i in range(min(3, max_results)):
-            mock_results.append(
-                {
-                    "file": f"{area_root}/example_file.py",
-                    "line": i + 1,
-                    "content": f"// Line containing: {query}",
-                    "match": query,
-                    "area": area.name,
-                }
+        try:
+            project = self.agent.get_active_project_or_raise()
+        except Exception:
+            # 如果没有激活的项目，返回空结果
+            return results
+
+        # 构建搜索模式：将 patterns 合并为正则表达式
+        # patterns 通常是 glob 模式，这里我们用 query 作为搜索模式
+        search_pattern = query
+
+        # 构建 paths_include_glob：基于区域的文件模式
+        # 例如 "*.py" for python-area, "*.go" for go-area
+        paths_include_glob = None
+        if patterns:
+            # 使用第一个模式作为文件过滤
+            paths_include_glob = patterns[0] if len(patterns) == 1 else "{" + ",".join(patterns) + "}"
+
+        try:
+            # 调用 Serena 的搜索功能
+            matches = project.search_source_files_for_pattern(
+                pattern=search_pattern,
+                relative_path="",  # 搜索整个项目
+                context_lines_before=0,
+                context_lines_after=0,
+                paths_include_glob=paths_include_glob,
+                paths_exclude_glob=None,
             )
 
-        return mock_results
+            # 转换结果格式
+            for match in matches[:max_results]:
+                if match.source_file_path is None:
+                    continue
+
+                # 获取匹配的内容
+                content = match.to_display_string()
+
+                # 提取行号（从 MatchedConsecutiveLines 的 start_line 属性）
+                line_number = match.start_line if hasattr(match, "start_line") else 1
+
+                results.append(
+                    {
+                        "file": match.source_file_path,
+                        "line": line_number,
+                        "content": content,
+                        "match": query,
+                        "area": area.name,
+                    }
+                )
+
+        except Exception as e:
+            # 搜索失败时记录错误但不抛出异常
+            # 让上层处理继续处理其他区域
+            import logging
+
+            logging.getLogger(__name__).warning(f"Search failed in area {area.name}: {e}")
+
+        return results
 
     def _create_error_result(self, query: str, error_type: str, message: str, context: dict[str, Any]) -> SafeSearchResult:
         """创建错误结果"""
